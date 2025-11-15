@@ -12,7 +12,6 @@ Chores, Chat, Machine, and Setting.
 ## High-level architecture 
 - Presentation layer: React functional components for UI rendering. 
 - State layer: Local state in App.jsx; child components hold their own internal state. 
-- Data/services layer: API and utility functions organized under services and utils. 
 - Styling: CSS files colocated with components or in shared locations.
 
 ## How files interact with each other 
