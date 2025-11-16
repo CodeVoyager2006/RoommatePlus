@@ -1,0 +1,48 @@
+.menu-bar{
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:0;
+  height:84px;
+  display:flex;
+  background:#fff;
+  border-top:1px solid #ccc;
+  z-index:20;
+  box-sizing:border-box;
+}
+
+.menu-item{
+  flex:1;
+  border:0;
+  background:transparent;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:8px 6px;
+  cursor:pointer;
+  font-family: Arial, sans-serif;
+  color:#222;
+}
+
+.menu-item:active{ opacity:0.8; }
+
+.menu-icon{
+  width:48px;
+  height:48px;
+  background:#e0e0e0;
+  border:1px solid #bbb;
+  border-radius:4px;
+  margin-bottom:6px;
+  box-sizing:border-box;
+}
+
+.menu-label{
+  font-size:12px;
+}
+
+/* active state */
+.menu-item.active .menu-icon{
+  border-color:#1976d2;
+  box-shadow: 0 0 0 3px rgba(25,118,210,0.08);
+}

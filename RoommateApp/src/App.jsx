@@ -1,21 +1,38 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { useState } from 'react'
-import './App.css'
-import Chores from './Chores.jsx'
-import Chat from './Chat.jsx'
-import Machine from './Machine.jsx'
-import Setting from './Setting.jsx'
-function App() {
-  const [count, setCount] = useState(0)
+import React, { useState } from "react";
+import Header from "./assets/Header";
+import MenuBar from "./assets/MenuBar";
+import Chores from "./Chores";
+import Chat from "./Chat";
+import Machine from "./Machine";
+import Setting from "./Setting";
+import "./App.css";
+
+export default function App() {
+  const [route, setRoute] = useState("chores");
+
+  const pages = {
+    chores: <Chores />,
+    chat: <Chat />,
+    machine: <Machine />,
+    settings: <Setting />
+  };
+
+  const menuItems = [
+    { key: "chores", label: "Chores", onClick: () => setRoute("chores"), active: route === "chores" },
+    { key: "chat", label: "Chat", onClick: () => setRoute("chat"), active: route === "chat" },
+    { key: "machine", label: "Machine Available", onClick: () => setRoute("machine"), active: route === "machine" },
+    { key: "settings", label: "Settings", onClick: () => setRoute("settings"), active: route === "settings" },
+  ];
 
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Chores />} />
-        <Route path="/about" element={<About />} />
-      </Routes>
-    </Router>
-  )
-}
+    <div className="app-root">
+      <Header user={{ name: "User Name", points: 1800, score: 900 }} />
 
-export default App
+      <main className="app-content">
+        {pages[route]}
+      </main>
+
+      <MenuBar items={menuItems} />
+    </div>
+  );
+}
