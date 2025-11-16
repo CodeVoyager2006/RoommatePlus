@@ -1,7 +1,13 @@
 import React from "react";
 import "./Header.css";
-
-export default function Header({ user = { name: "User Name", avatar: null, points: 1800, score: 900 } }) {
+/**
+ * 
+ * @param name a string that stores username
+ * @param points a number that stores user points
+ * @param streak a number that stores user streak
+ * @returns 
+ */
+export default function Header({ user = {name, points, streak} }) {
   return (
     <header className="app-header">
       <div className="header-left">
@@ -15,8 +21,8 @@ export default function Header({ user = { name: "User Name", avatar: null, point
       </div>
 
       <div className="header-right">
-        <div className="score-bubble">
-          <div className="score-value">{user.score}</div>
+        <div className="streak">
+          <div className="streak-value">Streaks: {user.streak}</div>
         </div>
       </div>
     </header>
