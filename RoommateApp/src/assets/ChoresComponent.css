@@ -161,3 +161,57 @@ html, body, #root {
     --block-width: 75%;
   }
 }
+/* ===== CHORE POPUP ===== */
+
+.chore-popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.chore-popup {
+  position: relative;
+  background: #ffffff;
+  border-radius: 16px;
+  width: 90vw;
+  max-width: 420px;
+  max-height: 80vh;
+  padding: 20px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.chore-popup-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.chore-popup-title {
+  margin: 0 0 10px 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.chore-popup-row {
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.chore-popup-description {
+  margin-top: 4px;
+}
+
+/* make blocks obviously clickable */
+.chores-block {
+  cursor: pointer;
+}

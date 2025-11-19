@@ -3,10 +3,9 @@ import ChoresBlock from "./ChoresBlock";
 import "./ChoresComponent.css";
 
 /**
- * ChoresWidget
- * @param {{roommate: {name: string, chores: Array}}} props
+ * @param {{roommate:{name:string, chores:any[]}, onBlockClick?:(chore:any)=>void}} props
  */
-export default function ChoresWidget({ roommate }) {
+export default function ChoresWidget({ roommate, onBlockClick }) {
   return (
     <section className="chores-widget" aria-label={`Chores for ${roommate.name}`}>
       <h3 className="widget-title">{roommate.name}</h3>
@@ -21,6 +20,10 @@ export default function ChoresWidget({ roommate }) {
               dueDate={c.dueDate}
               description={c.description}
               peopleAssigned={c.peopleAssigned}
+              onClick={() =>
+                onBlockClick &&
+                onBlockClick({ ...c, roommateName: roommate.name })
+              }
             />
           ))
         )}

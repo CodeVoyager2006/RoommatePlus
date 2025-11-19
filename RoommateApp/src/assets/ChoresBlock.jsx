@@ -5,7 +5,7 @@ import "./ChoresComponent.css";
  * ChoresBlock
  * @param {{title: string, dueDate: string, description: string, peopleAssigned: string[]}} props
  */
-export default function ChoresBlock({ title, dueDate, description, peopleAssigned = [] }) {
+export default function ChoresBlock({ title, dueDate, description, peopleAssigned = [], onClick }) {
 
   const formatDate = (d) => {
     if (!d) return "";
@@ -15,7 +15,7 @@ export default function ChoresBlock({ title, dueDate, description, peopleAssigne
   };
 
   return (
-    <div className="chores-block">
+    <div className="chores-block" onClick={onClick}>
       <div className="title">{title}</div>
       <div className="due-date">{formatDate(dueDate)}</div>
       <div className="description">{description}</div>
