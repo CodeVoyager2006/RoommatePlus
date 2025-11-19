@@ -1,7 +1,16 @@
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  background: #ffffff; /* set the same background as the app */
+  box-sizing: border-box;
+}
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 0;
   text-align: center;
 }
 
@@ -39,4 +48,161 @@
 
 .read-the-docs {
   color: #888;
+}
+
+/** Chat **/
+.chat {
+  min-height: 100vh;
+  max-width: 600px;
+  margin: 0 auto;
+  background-color: #000;
+  color: #f5f5f5;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    sans-serif;
+  display: flex;
+}
+
+/* Scrollable feed (Threads / X style) */
+.thread-feed {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Header image + member circles (scrolls with posts) */
+.chat-header {
+  position: relative;
+  height: 150px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid #262626;
+  overflow: hidden;
+}
+
+.header-image {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #111 0%, #262626 35%, #111 100%);
+}
+
+/* Members Circles */
+.members {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+}
+
+.member {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgb(167, 167, 167);
+  border: 2px solid #000;
+  margin-left: -12px; /* overlap effect */
+}
+
+.member:first-child {
+  margin-left: 0;
+}
+
+/* Individual “discussion posts” */
+.thread-card {
+  display: flex;
+  padding: 12px 16px 10px;
+  gap: 10px;
+  border-bottom: 1px solid #262626;
+}
+
+/* Avatar column */
+.thread-avatar-column {
+  width: 40px;
+  display: flex;
+  justify-content: center;
+}
+
+.thread-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: rgb(187, 187, 187);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #000;
+}
+
+/* Main content */
+.thread-main-column {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Top line: name, handle, time */
+.thread-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.thread-name {
+  font-weight: 600;
+}
+
+.thread-handle,
+.thread-time,
+.thread-dot {
+  color: #a3a3a3;
+  font-size: 12px;
+}
+
+/* Body text */
+.thread-text {
+  margin-top: 2px;
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.thread-text p {
+  margin: 0 0 2px;
+}
+
+/* Actions row (where like/share/comment normally are) */
+.thread-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+
+.thread-action {
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid #262626;
+  background: transparent;
+  font-size: 12px;
+  color: #a3a3a3;
+  cursor: pointer;
+}
+
+.thread-action.primary {
+  border-color: #f5f5f5;
+  color: #f5f5f5;
+}
+
+/* Tap feedback */
+.thread-action:active {
+  background-color: #181818;
+}
+
+/* Small-screen tweaks */
+@media (max-width: 480px) {
+  .thread-card {
+    padding-inline: 12px;
+  }
 }
