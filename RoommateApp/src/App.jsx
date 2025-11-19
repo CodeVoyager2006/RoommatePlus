@@ -26,7 +26,7 @@ export default function App() {
 
   return (
     <div className="app-root">
-      <Header user={{ name: "User Name", points: 1800, score: 900 }} />
+      <Header user={{ name: "User Name", points: 1800, score: 900, streak: 10 }} />
 
       <main className="app-content">
         {pages[route]}

@@ -36,7 +36,7 @@
 
 .pts-value { font-weight:700; margin-left:6px; }
 
-.header-right { padding-right:6px; }
+.header-right { display:flex; padding-right:6px; }
 
 .score-bubble {
   width:56px;
@@ -51,3 +51,17 @@
 }
 
 .score-value { font-weight:700; color:#e53935; }
+
+.streak {
+  width:56px;
+  height:56px;
+  border-radius:50%;
+  background: #fff;
+  border:2px solid #fbc02d;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow: 0 0 0 4px rgba(251,192,45,0.05);
+}
+
+.streak-value { font-weight:700; color:#e53935; }
