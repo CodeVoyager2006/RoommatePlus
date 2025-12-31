@@ -215,3 +215,143 @@ html, body, #root {
 .chores-block {
   cursor: pointer;
 }
+
+/* Floating create button (high contrast) */
+.chores-fab {
+  position: fixed;
+  right: 18px;
+  bottom: 90px; /* stays above menu bar */
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: #6fa86f;      /* solid green */
+  color: #ffffff;           /* white + icon */
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1500;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+}
+
+.chores-fab:hover {
+  background: #5c965c;
+}
+
+.chores-fab:active {
+  transform: scale(0.96);
+}
+
+/* Popup action buttons (delete flows) */
+.chore-popup-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.chore-action-btn {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  background: #f3f3f3;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.chore-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.chore-action-btn.primary {
+  background: #6fa86f;
+  border-color: #6fa86f;
+  color: #ffffff;
+}
+
+.chore-action-btn.danger {
+  background: #ffffff;
+  border-color: rgba(122, 16, 16, 0.45);
+  color: #7a1010;
+}
+
+/* Inline prompt overlay inside popup */
+.chore-action-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+}
+
+.chore-action-card {
+  width: 100%;
+  max-width: 360px;
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.chore-action-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.chore-action-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: none;
+  border-radius: 10px;
+  padding: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  font-size: 13px;
+}
+
+.chore-action-file {
+  width: 100%;
+  font-size: 13px;
+}
+
+.chore-action-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.chore-action-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.chore-action-small {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.chore-action-small.primary {
+  background: #6fa86f;
+  border-color: #6fa86f;
+  color: #ffffff;
+}
+
+.chore-action-small.danger {
+  border-color: rgba(122, 16, 16, 0.45);
+  color: #7a1010;
+}
