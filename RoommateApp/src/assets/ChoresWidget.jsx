@@ -13,16 +13,16 @@ export default function ChoresWidget({ roommate, onBlockClick }) {
         {roommate.chores.length === 0 ? (
           <div className="empty">No chores assigned</div>
         ) : (
-          roommate.chores.map((c, idx) => (
+          roommate.chores.map((c) => (
             <ChoresBlock
-              key={idx}
+              key={c.id || `${c.title}-${c.dueDate}`}  // ✅ FIX: stable key
               title={c.title}
               dueDate={c.dueDate}
               description={c.description}
               peopleAssigned={c.peopleAssigned}
               onClick={() =>
                 onBlockClick &&
-                onBlockClick({ ...c, roommateName: roommate.name })
+                onBlockClick({ ...c, roommateName: roommate.name }) // keeps id + adds owner label
               }
             />
           ))

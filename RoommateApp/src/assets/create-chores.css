@@ -1,0 +1,322 @@
+/* =========================
+   Create Chores Modal
+   ========================= */
+
+/* Overlay */
+.cc-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+/* Main sheet */
+.cc-sheet {
+  position: relative;
+  width: min(420px, 92vw);
+  height: min(760px, 92vh);
+  background: #d9f2d9; /* light green */
+  border: 2px solid #6fa86f;
+  border-radius: 18px;
+  overflow: hidden;
+  box-sizing: border-box;
+  color: #1a1a1a;
+}
+
+/* Close button */
+.cc-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid #4d4d4d;
+  background: #ffffff;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  color: #1a1a1a;
+}
+
+/* Content */
+.cc-content {
+  padding: 64px 18px 18px 18px;
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+/* Fields */
+.cc-field {
+  margin-bottom: 16px;
+}
+
+/* Labels */
+.cc-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #0f3d0f;
+}
+
+/* Inputs & textarea */
+.cc-input,
+.cc-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  outline: none;
+  background: #ffffff;
+  color: #1a1a1a;
+  border: 1px solid #6fa86f;
+}
+
+.cc-textarea {
+  resize: none;
+  min-height: 96px;
+}
+
+/* Placeholder text */
+.cc-input::placeholder,
+.cc-textarea::placeholder {
+  color: #555;
+  opacity: 1;
+}
+
+/* Row layout */
+.cc-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.cc-row-left {
+  flex: 1;
+}
+
+.cc-calendar-pill {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #eef8ee;
+  border: 1px solid #6fa86f;
+  font-size: 12px;
+  color: #1a1a1a;
+}
+
+/* Assign section */
+.cc-assign {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid #6fa86f;
+  background: #eef8ee;
+}
+
+.cc-assign-avatars {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.cc-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #6fa86f;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cc-muted {
+  font-size: 13px;
+  color: #444;
+}
+
+/* Assign plus button */
+.cc-assign-plus {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid #6fa86f;
+  background: #ffffff;
+  font-size: 20px;
+  cursor: pointer;
+  color: #1a1a1a;
+}
+
+/* Assign picker */
+.cc-assign-picker {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #6fa86f;
+}
+
+.cc-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 14px;
+  color: #1a1a1a;
+}
+
+/* Repeat section */
+.cc-repeat {
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid #6fa86f;
+  background: #eef8ee;
+}
+
+.cc-repeat-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cc-day {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #6fa86f;
+  background: #ffffff;
+  font-size: 12px;
+  cursor: pointer;
+  color: #1a1a1a;
+}
+
+.cc-day-on {
+  background: #6fa86f;
+  color: #ffffff;
+}
+
+/* Repeat summary */
+.cc-repeat-summary {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cc-chevron {
+  font-size: 18px;
+}
+
+/* Save button */
+.cc-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.cc-save {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  background: #6fa86f;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cc-save:disabled {
+  background: #a5cfa5;
+  cursor: not-allowed;
+}
+
+/* Errors */
+.cc-error {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #7a1010;
+}
+
+.cc-input-error {
+  border-color: #7a1010;
+}
+
+/* Close confirmation overlay */
+.cc-confirm-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+}
+
+.cc-confirm {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #6fa86f;
+  padding: 14px;
+  width: min(360px, 100%);
+}
+
+.cc-confirm-title {
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: #1a1a1a;
+}
+
+.cc-confirm-text {
+  font-size: 13px;
+  color: #333;
+}
+
+.cc-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.cc-confirm-btn {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #6fa86f;
+  background: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.cc-confirm-btn.primary {
+  background: #6fa86f;
+  color: #ffffff;
+  border: none;
+}
+
+.cc-confirm-btn.danger {
+  color: #7a1010;
+  border-color: #7a1010;
+}
+/* Date input styling to match other inputs */
+.cc-date-input {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+}
+
+/* Keep the native calendar icon, but ensure it doesn't create layout issues */
+.cc-date-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
