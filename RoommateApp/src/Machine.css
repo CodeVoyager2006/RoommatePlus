@@ -1,0 +1,100 @@
+/* Machine.css */
+
+:root {
+  --app-header-height: 88px;      /* fallback if not defined globally */
+  --app-bottomnav-height: 86px;   /* fallback if not defined globally */
+}
+
+.machine-page {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+
+  /* FIX: keep content below header (no global body padding needed) */
+  padding-top: calc(var(--app-header-height) + 14px);
+
+  padding-left: 14px;
+  padding-right: 14px;
+
+  /* Keep content above bottom nav */
+  padding-bottom: calc(var(--app-bottomnav-height) + 20px);
+
+  min-height: 100vh;
+  background: #ffffff;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.machine-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  width: 100%;
+}
+
+/* Floating Add button */
+.machine-fab {
+  position: fixed;
+  right: 22px;
+
+  /* FIX: keep above bottom nav */
+  bottom: calc(var(--app-bottomnav-height) + 22px);
+
+  width: 62px;
+  height: 62px;
+  border-radius: 999px;
+  border: none;
+  background: #d9d9d9;
+  color: #222;
+  font-size: 34px;
+  line-height: 62px;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  z-index: 60;
+}
+
+.machine-fab:active {
+  transform: scale(0.98);
+}
+
+/* Toast message */
+.machine-toast {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+
+  /* keep above bottom nav + FAB */
+  bottom: calc(var(--app-bottomnav-height) + 96px);
+
+  max-width: 520px;
+  width: calc(100% - 24px);
+  background: #111;
+  color: #fff;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  box-sizing: border-box;
+  z-index: 70;
+}
+
+/* Small screens */
+@media (max-width: 420px) {
+  .machine-page {
+    padding-top: calc(var(--app-header-height) + 16px);
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-bottom: calc(var(--app-bottomnav-height) + 26px);
+  }
+
+  .machine-grid {
+    gap: 12px;
+  }
+
+  .machine-fab {
+    right: 16px;
+    width: 58px;
+    height: 58px;
+    font-size: 32px;
+    line-height: 58px;
+  }
+}

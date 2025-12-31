@@ -1,0 +1,105 @@
+/* AddMachine.css */
+
+:root {
+  --app-header-height: 88px;
+}
+
+.am-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: calc(var(--app-header-height) + 16px) 16px 16px;
+  z-index: 999;
+}
+
+.am-card {
+  width: 100%;
+  max-width: 560px;
+  background: #f1f8f1; /* softer green */
+  border-radius: 14px;
+  border: 1px solid #bfcfbf;
+  padding: 18px 16px;
+  position: relative;
+  color: #1f2933; /* dark readable text */
+}
+
+.am-close {
+  position: absolute;
+  right: 12px;
+  top: 10px;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid #9fb59f;
+  background: #ffffff;
+  color: #111;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.am-title {
+  margin-top: 48px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #111;
+}
+
+.am-input {
+  width: 100%;
+  max-width: 100%;          /* FIX */
+  box-sizing: border-box;   /* FIX */
+
+  border: 1px solid #9fb59f;
+  border-radius: 10px;
+  padding: 10px 12px;
+
+  font-size: 13px;
+  background: #ffffff;
+  color: #111111;
+}
+.am-upload {
+  box-sizing: border-box;
+  margin-top: 16px;
+  border: 1px solid #9fb59f;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.am-upload-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111;
+}
+
+.am-upload-preview {
+  width: 76px;
+  height: 56px;
+  border-radius: 10px;
+  background: #d1d5db;
+  overflow: hidden;
+}
+
+.am-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.am-save {
+  border: 1px solid #9fb59f;
+  background: #ffffff;
+  color: #111;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 13px;
+  cursor: pointer;
+}
