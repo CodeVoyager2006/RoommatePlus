@@ -1,55 +1,41 @@
-// RoommateApp/src/App.jsx
 import React, { useState, useEffect } from "react";
+import { getCurrentUserProfile } from "./config/supabaseClient";
 import Header from "./assets/Header";
 import MenuBar from "./assets/MenuBar";
 import Chores from "./Chores";
 import Chat from "./Chat";
 import Machine from "./Machine";
 import Setting from "./Setting";
-import { getCurrentUser } from "./config/supabaseApi";
 import "./App.css";
 
 export default function App() {
   const [route, setRoute] = useState("chores");
-  const [user, setUser] = useState({
-    name: "User Name",
-    points: 0,
-    streak: 0
-  });
-  const [loading, setLoading] = useState(true);
+  const [userData, setUserData] = useState(null);
+  const [householdId, setHouseholdId] = useState(null);
 
-  // Fetch current user on mount
   useEffect(() => {
     loadUserData();
   }, []);
 
   const loadUserData = async () => {
     try {
-      setLoading(true);
-      const userData = await getCurrentUser();
+      // TODO: Replace with actual current user email from auth
+      localStorage.setItem('current_user_email', 'chris@demo.com');
       
-      if (userData) {
-        setUser({
-          name: userData.name,
-          points: userData.points,
-          streak: userData.streak
-        });
-      } else {
-        // No user session, use default
-        console.log('No active user session');
-      }
+      const user = await getCurrentUserProfile();
+      setUserData(user);
+      setHouseholdId(user.household_id);
+      
+      console.log('Loaded user:', user);
     } catch (err) {
-      console.error('Failed to load user data:', err);
-      // Keep default user data on error
-    } finally {
-      setLoading(false);
+      console.error('Error loading user:', err);
     }
   };
 
   const pages = {
-    chores: <Chores />,
+    chores: <Chores householdId={householdId} />,
     chat: <Chat />,
-    machine: <Machine />,
+    machine: <Machine householdId={householdId} />,
     settings: <Setting />
   };
 
@@ -60,25 +46,17 @@ export default function App() {
     { key: "settings", label: "Settings", onClick: () => setRoute("settings"), active: route === "settings" },
   ];
 
-  if (loading) {
-    return (
-      <div className="app-root">
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          height: '100vh',
-          background: '#ffffff'
-        }}>
-          Loading...
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="app-root">
-      <Header user={user} />
+      <Header user={userData ? {
+        name: `${userData.first_name} ${userData.last_name}`,
+        points: userData.points,
+        streak: userData.streak
+      } : {
+        name: 'Loading...',
+        points: 0,
+        streak: 0
+      }} />
 
       <main className="app-content">
         {pages[route]}
