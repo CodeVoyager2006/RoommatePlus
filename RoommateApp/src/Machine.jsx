@@ -1,30 +1,17 @@
-import React, { useMemo, useState } from "react";
+// RoommateApp/src/Machine.jsx
+import React, { useMemo, useState, useEffect } from "react";
 import MachineWidget from "./assets/MachineWidget";
 import MachineInfo from "./assets/MachineInfo";
 import AddMachine from "./assets/AddMachine";
+import { fetchMachines } from "./config/supabaseApi";
 import "./Machine.css";
 
 const CURRENT_USER = "You";
 
-const seedMachines = [
-  {
-    id: "m1",
-    name: "Machine #1",
-    image: null,
-    status: "available",
-    occupiedBy: "",
-  },
-  {
-    id: "m2",
-    name: "Machine #2",
-    image: null,
-    status: "busy",
-    occupiedBy: "Alex",
-  },
-];
-
 export default function Machine() {
-  const [machines, setMachines] = useState(seedMachines);
+  const [machines, setMachines] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const [selectedId, setSelectedId] = useState(null);
   const selectedMachine = useMemo(
@@ -36,6 +23,26 @@ export default function Machine() {
   const [isInfoOpen, setIsInfoOpen] = useState(false);
 
   const [toast, setToast] = useState({ open: false, message: "" });
+
+  // Fetch machines on mount
+  useEffect(() => {
+    loadMachines();
+  }, []);
+
+  const loadMachines = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await fetchMachines();
+      setMachines(data);
+    } catch (err) {
+      console.error('Failed to load machines:', err);
+      setError('Failed to load machines. Please try again.');
+      setMachines([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const openToast = (message) => {
     setToast({ open: true, message });
@@ -63,9 +70,14 @@ export default function Machine() {
       status: "available",
       occupiedBy: "",
     };
+    
+    // Optimistically update UI
     setMachines((prev) => [newMachine, ...prev]);
     setIsAddOpen(false);
     openToast("Machine added.");
+
+    // TODO: Add actual API call to create machine in database
+    // await supabase.from('machines').insert({...})
   };
 
   const requestOccupy = (id) => {
@@ -77,6 +89,7 @@ export default function Machine() {
       return;
     }
 
+    // Optimistically update UI
     setMachines((prev) =>
       prev.map((mm) =>
         mm.id === id ? { ...mm, status: "busy", occupiedBy: CURRENT_USER } : mm
@@ -85,9 +98,11 @@ export default function Machine() {
 
     onCloseInfo();
     openToast("Machine occupied.");
+
+    // TODO: Add actual API call to update machine occupation
+    // await supabase.from('machines').update({is_occupied: true, ...}).eq('id', id)
   };
 
-  // NEW: free/finish feature
   const requestFinish = (id) => {
     const m = machines.find((x) => x.id === id);
     if (!m) return;
@@ -95,6 +110,7 @@ export default function Machine() {
     // Only allow finishing if current user is the occupier
     if (!(m.status === "busy" && m.occupiedBy === CURRENT_USER)) return;
 
+    // Optimistically update UI
     setMachines((prev) =>
       prev.map((mm) =>
         mm.id === id ? { ...mm, status: "available", occupiedBy: "" } : mm
@@ -103,18 +119,62 @@ export default function Machine() {
 
     onCloseInfo();
     openToast("Machine freed.");
+
+    // TODO: Add actual API call to free machine
+    // await supabase.from('machines').update({is_occupied: false, occupied_by: null}).eq('id', id)
   };
 
   const canFinish =
     selectedMachine?.status === "busy" && selectedMachine?.occupiedBy === CURRENT_USER;
 
+  if (loading) {
+    return (
+      <div className="machine-page">
+        <div style={{ padding: '20px', textAlign: 'center' }}>
+          Loading machines...
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="machine-page">
+        <div style={{ padding: '20px', textAlign: 'center', color: '#7a1010' }}>
+          {error}
+          <div style={{ marginTop: '10px' }}>
+            <button 
+              onClick={loadMachines}
+              style={{ 
+                padding: '8px 16px', 
+                background: '#d9d9d9', 
+                color: '#222',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer'
+              }}
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="machine-page">
-      <div className="machine-grid">
-        {machines.map((m) => (
-          <MachineWidget key={m.id} machine={m} onClick={() => onOpenInfo(m.id)} />
-        ))}
-      </div>
+      {machines.length === 0 ? (
+        <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+          No machines found. Add your first machine!
+        </div>
+      ) : (
+        <div className="machine-grid">
+          {machines.map((m) => (
+            <MachineWidget key={m.id} machine={m} onClick={() => onOpenInfo(m.id)} />
+          ))}
+        </div>
+      )}
 
       <button
         className="machine-fab"

@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+// RoommateApp/src/Chores.jsx
+import React, { useState, useEffect } from "react";
 import ChoresWidget from "./assets/ChoresWidget";
 import ChoresPopup from "./assets/ChoresPopup";
 import CreateChores from "./assets/create-chores";
+import { fetchChores, fetchUsers } from "./config/supabaseApi";
 import "./assets/ChoresComponent.css";
 
 const genId = () => {
@@ -14,57 +16,42 @@ const genId = () => {
 export default function Chores() {
   const [selectedChore, setSelectedChore] = useState(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [roommates, setRoommates] = useState([]);
+  const [users, setUsers] = useState([]); // For create chore dropdown
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // NOTE: added id to each initial chore
-  const [roommates, setRoommates] = useState([
-    {
-      name: "You",
-      chores: [
-        {
-          id: genId(),
-          title: "Wash Dishes",
-          dueDate: "2025-06-30",
-          description: "Clean all dishes after dinner",
-          peopleAssigned: ["You", "Alice"],
-          repeatDays: ["Mon"],
-        },
-        {
-          id: genId(),
-          title: "Vacuum Living Room",
-          dueDate: "2025-07-03",
-          description: "Vacuum carpets and rugs",
-          peopleAssigned: ["You"],
-          repeatDays: ["Wed"],
-        },
-      ],
-    },
-    {
-      name: "Roommate #1",
-      chores: [
-        {
-          id: genId(),
-          title: "Mow Lawn",
-          dueDate: "2025-07-04",
-          description: "Front yard only",
-          peopleAssigned: ["Roommate #1"],
-          repeatDays: ["Sat"],
-        },
-      ],
-    },
-    {
-      name: "Roommate #2",
-      chores: [
-        {
-          id: genId(),
-          title: "Grocery Run",
-          dueDate: "2025-07-05",
-          description: "Buy milk, eggs, bread",
-          peopleAssigned: ["Roommate #2", "Roommate #1"],
-          repeatDays: ["Tue"],
-        },
-      ],
-    },
-  ]);
+  // Fetch chores data on mount
+  useEffect(() => {
+    loadChoresData();
+    loadUsers();
+  }, []);
+
+  const loadChoresData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await fetchChores();
+      setRoommates(data);
+    } catch (err) {
+      console.error('Failed to load chores:', err);
+      setError('Failed to load chores. Please try again.');
+      // Fallback to empty state
+      setRoommates([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadUsers = async () => {
+    try {
+      const data = await fetchUsers();
+      setUsers(data);
+    } catch (err) {
+      console.error('Failed to load users:', err);
+      setUsers([]);
+    }
+  };
 
   const handleBlockClick = (chore) => {
     setSelectedChore(chore);
@@ -90,6 +77,7 @@ export default function Chores() {
 
     const choreWithId = { ...newChore, id: newChore.id || genId() };
 
+    // Optimistically update UI
     setRoommates((prev) =>
       prev.map((r) => {
         if (choreWithId.peopleAssigned.includes(r.name)) {
@@ -98,12 +86,16 @@ export default function Chores() {
         return r;
       })
     );
+
+    // TODO: Add actual API call to create chore in database
+    // await supabase.from('chores').insert(...)
   };
 
   // Delete chore: used by BOTH abandon and finish flows (meta ignored for now)
   const deleteChore = (choreToDelete) => {
     if (!choreToDelete?.id) return;
 
+    // Optimistically update UI
     setRoommates((prev) =>
       prev.map((r) => ({
         ...r,
@@ -115,17 +107,63 @@ export default function Chores() {
     if (selectedChore?.id === choreToDelete.id) {
       setSelectedChore(null);
     }
+
+    // TODO: Add actual API call to delete chore from database
+    // await supabase.from('chores').delete().eq('id', choreToDelete.id)
   };
+
+  if (loading) {
+    return (
+      <main className="chores-page">
+        <h2 className="page-title">Your chores</h2>
+        <div style={{ padding: '20px', textAlign: 'center' }}>
+          Loading chores...
+        </div>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="chores-page">
+        <h2 className="page-title">Your chores</h2>
+        <div style={{ padding: '20px', textAlign: 'center', color: '#7a1010' }}>
+          {error}
+          <div style={{ marginTop: '10px' }}>
+            <button 
+              onClick={loadChoresData}
+              style={{ 
+                padding: '8px 16px', 
+                background: '#6fa86f', 
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer'
+              }}
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="chores-page">
       <h2 className="page-title">Your chores</h2>
 
-      <div className="widgets-container">
-        {roommates.map((r) => (
-          <ChoresWidget key={r.name} roommate={r} onBlockClick={handleBlockClick} />
-        ))}
-      </div>
+      {roommates.length === 0 ? (
+        <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+          No chores found. Create your first chore!
+        </div>
+      ) : (
+        <div className="widgets-container">
+          {roommates.map((r) => (
+            <ChoresWidget key={r.name} roommate={r} onBlockClick={handleBlockClick} />
+          ))}
+        </div>
+      )}
 
       {/* Floating "+" button */}
       <button type="button" className="chores-fab" aria-label="Create chore" onClick={openCreate}>
@@ -136,13 +174,13 @@ export default function Chores() {
         <ChoresPopup
           chore={selectedChore}
           onClose={closePopup}
-          onDelete={deleteChore}   // ✅ FIX: enables delete buttons
+          onDelete={deleteChore}
         />
       )}
 
       <CreateChores
         isOpen={isCreateOpen}
-        roommates={roommates.map((r) => ({ name: r.name }))}
+        roommates={users.length > 0 ? users : roommates.map((r) => ({ name: r.name }))}
         onCreate={createChore}
         onClose={closeCreate}
       />
