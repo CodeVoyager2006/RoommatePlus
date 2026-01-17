@@ -1,5 +1,5 @@
 import { React, useEffect } from "react";
-import supabaseClient from "./config/supabaseClient";
+import { supabaseClient } from "./config/supabaseClient";
 
 export default function Setting(){
   useEffect(() => {

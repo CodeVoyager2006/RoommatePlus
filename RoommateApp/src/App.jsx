@@ -1,27 +1,33 @@
 import React, { useState } from "react";
+import { useSession } from './config/useSession'
 import Header from "./assets/Header";
 import MenuBar from "./assets/MenuBar";
 import Chores from "./Chores";
 import Chat from "./Chat";
 import Machine from "./Machine";
 import Setting from "./Setting";
+import Auth from "./Auth";
 import "./App.css";
 
 export default function App() {
   const [route, setRoute] = useState("chores");
+  const { session, loading } = useSession()
+
+  // // Not logged in => show auth screen
+  if (!session) return <Auth />
 
   const pages = {
     chores: <Chores />,
     chat: <Chat />,
     machine: <Machine />,
-    settings: <Setting />
+    settings: <Setting />,
   };
 
   const menuItems = [
     { key: "chores", label: "Chores", onClick: () => setRoute("chores"), active: route === "chores" },
     { key: "chat", label: "Chat", onClick: () => setRoute("chat"), active: route === "chat" },
     { key: "machine", label: "Machine Available", onClick: () => setRoute("machine"), active: route === "machine" },
-    { key: "settings", label: "Settings", onClick: () => setRoute("settings"), active: route === "settings" },
+    { key: "settings", label: "Settings", onClick: () => setRoute("settings"), active: route === "settings" }
   ];
 
   return (
