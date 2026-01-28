@@ -25,6 +25,11 @@ To solve the problems and concerns from the data collected, we implement the fol
   - There will be an AI model that summarize the conversation
 - Feature 3
   - Have a page to let users know which machines are occupied/free in the house
+
+
+## Figma Prototype
+Here is the figma prototype link for visualization of the project: [Figma Prototype](https://www.figma.com/proto/z12CMm7ZjLSdeU77UJvqRs/Roommates-?node-id=3-2063&t=sopP8U7hcxtEVqEq-1)
+
 ## How to try out app
 Follow these steps to download the software and start developing:
 1. Make a copy to the code base
