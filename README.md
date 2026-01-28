@@ -35,6 +35,7 @@ Follow these steps to download the software and start developing:
 1. Make a copy to the code base
 2. Use Visual Studio Code to display the code
 3. Download and enable the Mobile Preview extension
-4. Open terminal and run ```npm run dev```
-5. Run the Mobile Preview extension by using ```Ctrl + Shift + p```
-6. Copy and paste the url provided "Localhost" to the Mobile Preview tab
+4. Move into RoommateApp folder ```cd ./RoommateApp```
+5. Open terminal and run ```npm run dev```
+6. Run the Mobile Preview extension by using ```Ctrl + Shift + p```
+7. Copy and paste the url provided "Localhost" to the Mobile Preview tab
