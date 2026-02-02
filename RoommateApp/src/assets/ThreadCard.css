@@ -1,0 +1,53 @@
+/* ThreadCard.css */
+
+.tc-card {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 14px;
+  padding: 14px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.tc-main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tc-title {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--text);
+}
+
+.tc-summary {
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--muted);
+  opacity: 1;
+}
+
+.tc-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tc-time {
+  font-size: 12px;
+  color: var(--muted);
+  opacity: 1;
+}
+
+.tc-card:hover {
+  background: #eef2ff;
+}
+
+.tc-card:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}

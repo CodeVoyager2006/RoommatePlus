@@ -1,0 +1,27 @@
+/* Avatar.css */
+
+.avatar {
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  background: #e5e7eb;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+}
+
+.avatar__text {
+  font-size: 12px;
+  font-weight: 800;
+  color: #111827;
+  user-select: none;
+}
+
+.avatar--gray {
+  background: #e5e7eb;
+}
+
+.avatar--dark {
+  background: #d1d5db;
+}
