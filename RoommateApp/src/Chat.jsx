@@ -9,10 +9,10 @@ import "./Chat.css";
 const CURRENT_USER = "You";
 
 const seedMembers = [
-  { id: "u1", name: "Alex", status: "home" },
-  { id: "u2", name: "Sam", status: "away" },
-  { id: "u3", name: "Jamie", status: "home" },
-  { id: "u4", name: "Taylor", status: "busy" },
+  { id: "u1", name: "Alex"},
+  { id: "u2", name: "Sam"},
+  { id: "u3", name: "Jamie"},
+  { id: "u4", name: "Taylor"},
 ];
 
 const seedThreads = [

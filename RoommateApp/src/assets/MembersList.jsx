@@ -17,7 +17,6 @@ export default function MembersList({ members, onBack }) {
           <div key={m.id} className="ml-row">
             <Avatar name={m.name} size={44} />
             <div className="ml-meta">
-              <div className="ml-status">status: {m.status}</div>
               <div className="ml-name">{m.name}</div>
             </div>
           </div>
