@@ -1,98 +1,210 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
+import MembersBanner from "./assets/MembersBanner";
+import ThreadCard from "./assets/ThreadCard";
+import MembersList from "./assets/MembersList";
+import ThreadView from "./assets/ThreadView";
+import NewThreadModal from "./assets/NewThreadModal";
+import "./Chat.css";
 
-const posts = [
-  {
-    id: 1,
-    initials: "JS",
-    name: "Jessica Smith",
-    time: "2d",
-    text:
-      "AI Summary: After reviewing the house cameras, it was confirmed that Jessica 'that stank' was caught making out with Emily's ex-boyfriend behind the garage for EXACTLY 43 seconds. Emily has since declared emotional bankruptcy."
-  },
-  {
-    id: 2,
-    initials: "EM",
-    name: "Emily Martin",
-    time: "2d",
-    text:
-      "AI Summary: Emily confronted Jessica at brunch, but Jessica tried to deny everything while holding the SAME hoodie she 'borrowed' from the same ex. The omelets were cold. The tension was not."
-  },
-  {
-    id: 3,
-    initials: "CL",
-    name: "Chloe Lane",
-    time: "1d",
-    text:
-      "AI Summary: Chloe accidentally started a group chat war after sending a screenshot of the group chat… to the group chat. Three friendships died instantly. No survivors."
-  },
-  {
-    id: 4,
-    initials: "BR",
-    name: "Brianna Rose",
-    time: "1d",
-    text:
-      "AI Summary: Brianna hosted a 'girls-only wellness night' but forgot to hide her situationship in the pantry. He was discovered when he sneezed during meditation. All chakras unaligned permanently."
-  },
-  {
-    id: 5,
-    initials: "HA",
-    name: "Hannah Adams",
-    time: "16h",
-    text:
-      "AI Summary: Hannah tried to fake cry in the bathroom to get sympathy, but Alexa accidentally broadcasted her rehearsing the cry sounds. Trust levels dropped below sea level."
-  },
-  {
-    id: 6,
-    initials: "MS",
-    name: "Madison Summers",
-    time: "8h",
-    text:
-      "AI Summary: Madison attempted to expose Emily for 'stealing her skincare routine,' but the AI detected Madison actually copied it from TikTok user @glowmom247. The court of girl opinions ruled swiftly."
-  }
+const CURRENT_USER = "You";
+
+const seedMembers = [
+  { id: "u1", name: "Alex", status: "home" },
+  { id: "u2", name: "Sam", status: "away" },
+  { id: "u3", name: "Jamie", status: "home" },
+  { id: "u4", name: "Taylor", status: "busy" },
 ];
 
+const seedThreads = [
+  {
+    id: "t1",
+    title: "Kitchen cleanup",
+    summary: "AI Summary: Reminder to reset counters, take out trash, and run dishwasher tonight.",
+    author: "Alex",
+    createdAt: Date.now() - 1000 * 60 * 60 * 4,
+    messages: [
+      {
+        id: "m1",
+        author: "Alex",
+        text: "Can we all do a quick kitchen reset tonight?",
+        createdAt: Date.now() - 1000 * 60 * 60 * 4,
+      },
+      {
+        id: "m2",
+        author: "Jamie",
+        text: "I can do counters + wipe the stove.",
+        createdAt: Date.now() - 1000 * 60 * 60 * 3.5,
+      },
+    ],
+  },
+  {
+    id: "t2",
+    title: "Laundry schedule",
+    summary: "AI Summary: Suggestion to add a simple washer/dryer rotation so nobody blocks machines.",
+    author: "Sam",
+    createdAt: Date.now() - 1000 * 60 * 60 * 24,
+    messages: [
+      {
+        id: "m3",
+        author: "Sam",
+        text: "Can we agree on a laundry rotation?",
+        createdAt: Date.now() - 1000 * 60 * 60 * 24,
+      },
+    ],
+  },
+];
+
+function formatTime(ts) {
+  const d = new Date(ts);
+  return d.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+function makeSummaryFromBody(body) {
+  const cleaned = body.trim().replace(/\s+/g, " ");
+  const short = cleaned.length > 90 ? `${cleaned.slice(0, 90)}…` : cleaned;
+  return `AI Summary: ${short || "No summary available."}`;
+}
+
 export default function Chat() {
+  const [members] = useState(seedMembers);
+  const [threads, setThreads] = useState(seedThreads);
+
+  // "threads" | "members" | "thread"
+  const [view, setView] = useState("threads");
+  const [selectedId, setSelectedId] = useState(null);
+
+  const selectedThread = useMemo(
+    () => threads.find((t) => t.id === selectedId) || null,
+    [threads, selectedId]
+  );
+
+  const [composerText, setComposerText] = useState("");
+  const [isNewOpen, setIsNewOpen] = useState(false);
+  const [newPrefillBody, setNewPrefillBody] = useState("");
+
+  const openMembers = () => setView("members");
+
+  const openThread = (id) => {
+    setSelectedId(id);
+    setView("thread");
+  };
+
+  const goBackToThreads = () => {
+    setView("threads");
+    setSelectedId(null);
+  };
+
+  const openNewThread = () => {
+    const body = composerText.trim();
+    setNewPrefillBody(body);
+    setIsNewOpen(true);
+  };
+
+  const createThread = ({ title, body }) => {
+    const now = Date.now();
+    const newThread = {
+      id: `t_${now}_${Math.random().toString(16).slice(2)}`,
+      title: title.trim() || "Untitled",
+      summary: makeSummaryFromBody(body),
+      author: CURRENT_USER,
+      createdAt: now,
+      messages: body.trim()
+        ? [
+            {
+              id: `m_${now}_0`,
+              author: CURRENT_USER,
+              text: body.trim(),
+              createdAt: now,
+            },
+          ]
+        : [],
+    };
+
+    setThreads((prev) => [newThread, ...prev]);
+    setComposerText("");
+    setIsNewOpen(false);
+    setNewPrefillBody("");
+  };
+
+  const postMessage = (threadId, text) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+
+    const now = Date.now();
+    setThreads((prev) =>
+      prev.map((t) => {
+        if (t.id !== threadId) return t;
+        const msg = {
+          id: `m_${now}_${Math.random().toString(16).slice(2)}`,
+          author: CURRENT_USER,
+          text: trimmed,
+          createdAt: now,
+        };
+        return { ...t, messages: [...t.messages, msg] };
+      })
+    );
+  };
+
   return (
-    <div className="chat">
-      <main className="thread-feed element">
-        {/* Header image + member circles, scroll with feed */}
-        <div className="chat-header">
-          <div className="header-image" />
-          <div className="members">
-            <div className="member" />
-            <div className="member" />
-            <div className="member" />
+    <div className="chat-page">
+      {view === "threads" && (
+        <>
+          <MembersBanner members={members} onClick={openMembers} />
+
+          <div className="chat-thread-list">
+            {threads.map((t) => (
+              <ThreadCard
+                key={t.id}
+                title={t.title}
+                summary={t.summary}
+                author={t.author}
+                timeLabel={formatTime(t.createdAt)}
+                onClick={() => openThread(t.id)}
+              />
+            ))}
           </div>
-        </div>
 
-        {/* Discussion posts */}
-        {posts.map((post) => (
-          <article key={post.id} className="thread-card">
-            <div className="thread-avatar-column">
-              <div className="thread-avatar">{post.initials}</div>
-            </div>
+          <div className="chat-composer" role="region" aria-label="Create a new discussion thread">
+            <input
+              className="chat-composer__input"
+              placeholder="Your message..."
+              value={composerText}
+              onChange={(e) => setComposerText(e.target.value)}
+            />
+            <button
+              className="chat-composer__btn"
+              type="button"
+              onClick={openNewThread}
+              disabled={!composerText.trim()}
+            >
+              Post
+            </button>
+          </div>
 
-            <div className="thread-main-column">
-              <div className="thread-meta-row">
-                <span className="thread-name">{post.name}</span>
-                <span className="thread-dot">·</span>
-                <span className="thread-time">{post.time}</span>
-              </div>
+          <NewThreadModal
+            open={isNewOpen}
+            onClose={() => {
+              setIsNewOpen(false);
+              setNewPrefillBody("");
+            }}
+            onCreate={createThread}
+            prefillBody={newPrefillBody}
+          />
+        </>
+      )}
 
-              <div className="thread-text">
-                {post.text.split("\n").map((line, i) => (
-                  <p key={i}>{line}</p>
-                ))}
-              </div>
+      {view === "members" && (
+        <MembersList members={members} onBack={goBackToThreads} />
+      )}
 
-              <div className="thread-actions">
-                <button className="thread-action primary">Open chat</button>
-                <button className="thread-action">React</button>
-              </div>
-            </div>
-          </article>
-        ))}
-      </main>
+      {view === "thread" && (
+        <ThreadView
+          thread={selectedThread}
+          onBack={goBackToThreads}
+          onSend={(text) => selectedThread && postMessage(selectedThread.id, text)}
+          formatTime={formatTime}
+        />
+      )}
     </div>
   );
 }

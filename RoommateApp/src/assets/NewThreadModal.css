@@ -1,0 +1,126 @@
+/* NewThreadModal.css */
+
+:root {
+  --app-header-height: 88px;
+}
+
+.nt-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: calc(var(--app-header-height) + 16px) 16px 16px;
+  z-index: 999;
+}
+
+.nt-card {
+  width: 100%;
+  max-width: 560px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 18px 16px;
+  position: relative;
+  color: #111827;
+  box-sizing: border-box;
+}
+
+.nt-close {
+  position: absolute;
+  right: 12px;
+  top: 10px;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--danger);     /* make close clearly visible */
+  font-weight: 900;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.nt-close:hover {
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+.nt-title {
+  margin-top: 48px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 900;
+  color: #111827;
+}
+
+.nt-input {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.nt-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 12px;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  resize: vertical;
+}
+
+.nt-input,
+.nt-textarea {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.nt-input::placeholder,
+.nt-textarea::placeholder {
+  color: var(--muted);
+  opacity: 0.9;
+}
+
+.nt-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+.nt-btn {
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: var(--primary-text);
+  font-weight: 800;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.nt-btn:disabled {
+  opacity: 0.6;
+  background: #93c5fd;
+  border-color: #93c5fd;
+  color: #0f172a;
+  cursor: not-allowed;
+}
+
+.nt-btn:hover:not(:disabled) {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+.nt-close:focus-visible,
+.nt-btn:focus-visible,
+.nt-input:focus-visible,
+.nt-textarea:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}

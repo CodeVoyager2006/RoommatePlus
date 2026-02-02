@@ -1,0 +1,68 @@
+/* MembersBanner.css */
+
+.mb-banner {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 14px;
+  padding: 14px 12px;
+  display: grid;
+  grid-template-columns: 86px 1fr 22px;
+  align-items: center;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.mb-house {
+  width: 76px;
+  height: 56px;
+  border-radius: 12px;
+  background: #dbeafe;         /* light blue block */
+  border: 1px solid #93c5fd;
+}
+
+.mb-mid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+}
+
+.mb-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.mb-avatars {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mb-avatar {
+  margin-left: -10px;
+}
+
+.mb-avatar:first-child {
+  margin-left: 0;
+}
+
+.mb-chevron {
+  font-size: 22px;
+  color: var(--text);
+  opacity: 1;                   /* was too faint */
+  font-weight: 900;
+  text-align: right;
+}
+
+.mb-banner:hover {
+  background: #eef2ff;
+}
+
+.mb-banner:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
