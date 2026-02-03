@@ -7,7 +7,7 @@ import "./Header.css";
  * @param streak a number that stores user streak
  * @returns 
  */
-export default function Header({ user = {name, points, streak} }) {
+export default function Header({ user = {name : "", points : 0, streak : 0} }) {
   return (
     <header className="app-header">
       <div className="header-left">
