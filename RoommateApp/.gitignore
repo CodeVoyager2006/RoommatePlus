@@ -7,11 +7,11 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-./RoommateApp/node_modules
-./RoommateApp/dist
+/RoommateApp/node_modules
+/RoommateApp/dist
 dist-ssr
 *.local
-./RoommateApp/.env
+/RoommateApp/.env
 
 # Editor directories and files
 .vscode/*

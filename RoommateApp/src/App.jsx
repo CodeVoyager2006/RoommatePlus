@@ -1,38 +1,240 @@
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { supabase } from "./supabaseClient";
+
 import Header from "./assets/Header";
 import MenuBar from "./assets/MenuBar";
+
+import Home from "./Home";
+import SignUp from "./SignUp";
+import LogIn from "./LogIn";
+import HouseSetup from "./HouseSetup";
+import HouseCreate from "./HouseCreate";
+import HouseLogin from "./HouseLogin";
+
 import Chores from "./Chores";
 import Chat from "./Chat";
 import Machine from "./Machine";
 import Setting from "./Setting";
-import "./App.css";
 
+/* =========================
+   AUTHENTICATED APP LAYOUT
+   Mounted at /app/*
+   ========================= */
+function AppLayout({ profile }) {
+  return (
+    <>
+      <Header
+        displayName={profile.display_name}
+        points={profile.points}
+        streaks={profile.streaks}
+      />
+      <MenuBar />
+
+      <Routes>
+        <Route index element={<Chores />} />
+        <Route path="chat" element={<Chat />} />
+        <Route path="machine" element={<Machine />} />
+        <Route path="setting" element={<Setting />} />
+        <Route path="*" element={<Navigate to="/app" replace />} />
+      </Routes>
+    </>
+  );
+}
+
+/* =========================
+   APP ROOT
+   ========================= */
 export default function App() {
-  const [route, setRoute] = useState("chores");
+  const [sessionLoading, setSessionLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(true);
 
-  const pages = {
-    chores: <Chores />,
-    chat: <Chat />,
-    machine: <Machine />,
-    settings: <Setting />
-  };
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
 
-  const menuItems = [
-    { key: "chores", label: "Chores", onClick: () => setRoute("chores"), active: route === "chores" },
-    { key: "chat", label: "Chat", onClick: () => setRoute("chat"), active: route === "chat" },
-    { key: "machine", label: "Machine Available", onClick: () => setRoute("machine"), active: route === "machine" },
-    { key: "settings", label: "Settings", onClick: () => setRoute("settings"), active: route === "settings" },
-  ];
+  /* =========================
+     SUPABASE AUTH CONNECTION
+     ========================= */
+  useEffect(() => {
+    let mounted = true;
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (!mounted) return;
+      setSession(data.session ?? null);
+      setSessionLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (!mounted) return;
+      setSession(newSession ?? null);
+      setSessionLoading(false);
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  /* =========================
+     LOAD PROFILE
+     ========================= */
+  useEffect(() => {
+    let cancelled = false;
+
+    // If not logged in, no profile needed
+    if (!session?.user) {
+      setProfile(null);
+      setProfileLoading(false);
+      return;
+    }
+
+    setProfileLoading(true);
+
+    const loadProfile = async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("display_name, points, streaks, household_id")
+        .eq("id", session.user.id)
+        .single();
+
+      if (cancelled) return;
+
+      if (!error && data) {
+        setProfile(data);
+      } else {
+        // Important: avoid redirect loops when profile fetch fails
+        setProfile(null);
+      }
+
+      setProfileLoading(false);
+    };
+
+    loadProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
+
+  // Block routing until we know whether we have a session + (if session) have attempted profile load
+  if (sessionLoading || profileLoading) return null;
+
+  const isAuthed = !!session?.user;
+
+  // If authed but profile couldn't be loaded, keep user on a safe public page
+  // (prevents infinite redirects). You can swap this to an error UI later.
+  const hasProfile = !!profile;
+  const hasHouse = !!profile?.household_id;
 
   return (
-    <div className="app-root">
-      <Header user={{ name: "User Name", points: 1800, score: 900, streak: 10 }} />
+    <Routes>
+      {/* PUBLIC */}
+      <Route
+        path="/"
+        element={
+          !isAuthed ? (
+            <Home />
+          ) : hasProfile ? (
+            hasHouse ? (
+              <Navigate to="/app" replace />
+            ) : (
+              <Navigate to="/house-setup" replace />
+            )
+          ) : (
+            <Home />
+          )
+        }
+      />
+      <Route
+        path="/signup"
+        element={
+          !isAuthed ? (
+            <SignUp />
+          ) : hasProfile ? (
+            hasHouse ? (
+              <Navigate to="/app" replace />
+            ) : (
+              <Navigate to="/house-setup" replace />
+            )
+          ) : (
+            <Home />
+          )
+        }
+      />
+      <Route
+        path="/login"
+        element={
+          !isAuthed ? (
+            <LogIn />
+          ) : hasProfile ? (
+            hasHouse ? (
+              <Navigate to="/app" replace />
+            ) : (
+              <Navigate to="/house-setup" replace />
+            )
+          ) : (
+            <Home />
+          )
+        }
+      />
 
-      <main className="app-content">
-        {pages[route]}
-      </main>
+      {/* HOUSE SETUP */}
+      <Route
+        path="/house-setup"
+        element={
+          isAuthed && hasProfile && !hasHouse ? (
+            <HouseSetup />
+          ) : isAuthed && hasProfile && hasHouse ? (
+            <Navigate to="/app" replace />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
+      />
+      <Route
+        path="/house-create"
+        element={
+          isAuthed && hasProfile && !hasHouse ? (
+            <HouseCreate />
+          ) : isAuthed && hasProfile && hasHouse ? (
+            <Navigate to="/app" replace />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
+      />
+      <Route
+        path="/house-login"
+        element={
+          isAuthed && hasProfile && !hasHouse ? (
+            <HouseLogin />
+          ) : isAuthed && hasProfile && hasHouse ? (
+            <Navigate to="/app" replace />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
+      />
 
-      <MenuBar items={menuItems} />
-    </div>
+      {/* AUTHENTICATED APP */}
+      <Route
+        path="/app/*"
+        element={
+          isAuthed && hasProfile && hasHouse ? (
+            <AppLayout profile={profile} />
+          ) : isAuthed && hasProfile && !hasHouse ? (
+            <Navigate to="/house-setup" replace />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
+      />
+
+      {/* FALLBACK */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
