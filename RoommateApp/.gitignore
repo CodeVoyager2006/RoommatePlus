@@ -8,9 +8,10 @@ pnpm-debug.log*
 lerna-debug.log*
 
 ./RoommateApp/node_modules
-dist
+./RoommateApp/dist
 dist-ssr
 *.local
+./RoommateApp/.env
 
 # Editor directories and files
 .vscode/*
