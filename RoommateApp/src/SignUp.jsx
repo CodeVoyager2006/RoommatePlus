@@ -7,45 +7,52 @@ export default function SignUp() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function handleSignUp() {
+    if (!displayName.trim()) {
+      alert("Please enter a display name");
+      return;
+    }
+
+    setLoading(true);
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          display_name: displayName.trim(),
+        },
+      },
     });
 
     if (error) {
       alert(error.message);
+      setLoading(false);
       return;
     }
 
     const user = data.user;
-    if (!user) return;
-
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .insert({
-        id: user.id,
-        display_name: displayName,
-        points: 0,
-        streaks: 0,
-        household_id: null,
-      });
-
-    if (profileError) {
-      alert(profileError.message);
+    if (!user) {
+      setLoading(false);
       return;
     }
+    // Optional: Wait a moment for the trigger to complete
+    await new Promise(resolve => setTimeout(resolve, 500));
 
+    setLoading(false);
     navigate("/house-setup");
   }
 
   return (
     <div>
-      <input placeholder="Display Name" onChange={e => setDisplayName(e.target.value)} />
-      <input placeholder="Email" onChange={e => setEmail(e.target.value)} />
-      <input type="password" placeholder="Password" onChange={e => setPassword(e.target.value)} />
-      <button onClick={handleSignUp}>Sign Up</button>
+      <input placeholder="Display Name" onChange={e => setDisplayName(e.target.value)} disabled={loading} />
+      <input placeholder="Email" onChange={e => setEmail(e.target.value)} disabled={loading} />
+      <input type="password" placeholder="Password" onChange={e => setPassword(e.target.value)} disabled={loading} />
+      <button onClick={handleSignUp} disabled={loading}>
+        {loading ? "Signing Up..." : "Sign Up"}
+      </button>
     </div>
   );
 }
