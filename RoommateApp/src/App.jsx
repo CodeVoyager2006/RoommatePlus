@@ -32,7 +32,8 @@ function AppLayout({ profile }) {
       <MenuBar />
 
       <Routes>
-        <Route index element={<Chores />} />
+        {/* Pass household_id so Chores can fetch all members/chores in same house */}
+        <Route index element={<Chores householdId={profile.household_id} />} />
         <Route path="chat" element={<Chat />} />
         <Route path="machine" element={<Machine />} />
         <Route path="setting" element={<Setting />} />
@@ -84,7 +85,6 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
 
-    // If not logged in, no profile needed
     if (!session?.user) {
       setProfile(null);
       setProfileLoading(false);
@@ -105,7 +105,6 @@ export default function App() {
       if (!error && data) {
         setProfile(data);
       } else {
-        // Important: avoid redirect loops when profile fetch fails
         setProfile(null);
       }
 
@@ -119,13 +118,9 @@ export default function App() {
     };
   }, [session]);
 
-  // Block routing until we know whether we have a session + (if session) have attempted profile load
   if (sessionLoading || profileLoading) return null;
 
   const isAuthed = !!session?.user;
-
-  // If authed but profile couldn't be loaded, keep user on a safe public page
-  // (prevents infinite redirects). You can swap this to an error UI later.
   const hasProfile = !!profile;
   const hasHouse = !!profile?.household_id;
 
@@ -219,7 +214,7 @@ export default function App() {
         }
       />
 
-      {/* AUTHENTICATED APP */}
+      {/* APP */}
       <Route
         path="/app/*"
         element={
@@ -233,7 +228,6 @@ export default function App() {
         }
       />
 
-      {/* FALLBACK */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
