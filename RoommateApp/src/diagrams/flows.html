@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Data Flows - Project Architecture</title>
+    <link rel="stylesheet" href="./Style/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>🏗️ Complete Project Architecture</h1>
+      <p class="subtitle">Interactive Component & Database Diagram</p>
+
+      <div class="tabs">
+        <button
+          class="tab-button"
+          onclick="window.location.href = 'index.html'"
+        >
+          📦 Components
+        </button>
+        <button class="tab-button" onclick="window.location.href = 'db.html'">
+          🗄️ Database
+        </button>
+        <button
+          class="tab-button active"
+          onclick="window.location.href = 'flows.html'"
+        >
+          🔄 Data Flows
+        </button>
+      </div>
+
+      <!-- FLOWS TAB -->
+      <div id="flows-tab" class="tab-content active">
+        <div class="flow-diagram">
+          <h2 style="color: #fff; margin-bottom: 20px">
+            🔄 Creating a New Chore
+          </h2>
+
+          <div class="flow-step">
+            <span class="flow-step-number">1.</span>
+            <strong>User clicks "+" button</strong> on Chores page
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">2.</span>
+            <strong>Chores.jsx</strong> sets isCreateOpen = true
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">3.</span>
+            <strong>CreateChores modal</strong> appears on screen
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">4.</span>
+            <strong>User fills form:</strong> Title, Due Date, Assigned People,
+            Description (optional)
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">5.</span>
+            <strong>User clicks "Create"</strong>
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">6.</span>
+            <strong>CreateChores</strong> calls onCreate(choreData) callback
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">7.</span>
+            <strong>Chores.jsx</strong> validates required fields (title,
+            dueDate, peopleAssigned)
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">8.</span>
+            <strong>Chores.jsx</strong> generates unique ID using
+            crypto.randomUUID()
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">9.</span>
+            <strong>Chores.jsx</strong> updates roommates state - adds chore to
+            each assigned person
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">10.</span>
+            <strong>React</strong> detects state change and re-renders
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">11.</span>
+            <strong>ChoresWidget</strong> components update to show new chore
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">12.</span>
+            <strong>Modal closes</strong> and user sees the new chore in their
+            list!
+          </div>
+
+          <div
+            style="
+              margin-top: 20px;
+              padding: 15px;
+              background: rgba(46, 204, 113, 0.1);
+              border-left: 3px solid #2ecc71;
+              border-radius: 5px;
+            "
+          >
+            <strong style="color: #2ecc71">Database (Future):</strong> Steps
+            9-10 will also INSERT into
+            <span class="db-field">chores</span> table and
+            <span class="db-field">chore_assignments</span> table
+          </div>
+        </div>
+
+        <div class="flow-diagram">
+          <h2 style="color: #fff; margin-bottom: 20px">
+            🧺 Occupying a Machine
+          </h2>
+
+          <div class="flow-step">
+            <span class="flow-step-number">1.</span>
+            <strong>User clicks</strong> on a machine card
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">2.</span>
+            <strong>MachineWidget</strong> calls onClick(machineId) callback
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">3.</span>
+            <strong>Machine.jsx</strong> sets selectedId and opens MachineInfo
+            modal
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">4.</span>
+            <strong>MachineInfo</strong> displays machine details and "Occupy"
+            button
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">5.</span>
+            <strong>User clicks "Occupy"</strong>
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">6.</span>
+            <strong>MachineInfo</strong> calls onOccupy() callback
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">7.</span>
+            <strong>Machine.jsx</strong> runs requestOccupy(id) - checks if
+            status === "available"
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">8a.</span>
+            <strong>IF BUSY:</strong> Shows toast "Machine is currently being
+            used" and stops
+          </div>
+
+          <div class="flow-step" style="background: rgba(46, 204, 113, 0.1)">
+            <span class="flow-step-number">8b.</span>
+            <strong>IF AVAILABLE:</strong> Updates machine state: status =
+            "busy", occupiedBy = "You"
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">9.</span>
+            <strong>Machine.jsx</strong> shows toast "Machine occupied" and
+            closes modal
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">10.</span>
+            <strong>React</strong> re-renders MachineWidget with updated status
+            (now shows "Busy - You")
+          </div>
+
+          <div
+            style="
+              margin-top: 20px;
+              padding: 15px;
+              background: rgba(46, 204, 113, 0.1);
+              border-left: 3px solid #2ecc71;
+              border-radius: 5px;
+            "
+          >
+            <strong style="color: #2ecc71">Database (Future):</strong> Step 8b
+            will UPDATE <span class="db-field">machines</span> table, setting
+            occupied_by to current user's ID
+          </div>
+        </div>
+
+        <div class="flow-diagram">
+          <h2 style="color: #fff; margin-bottom: 20px">
+            💬 Sending a Chat Message
+          </h2>
+
+          <div class="flow-step">
+            <span class="flow-step-number">1.</span>
+            <strong>User opens thread</strong> by clicking ThreadCard
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">2.</span>
+            <strong>Chat.jsx</strong> switches view to "thread" and shows
+            ThreadView component
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">3.</span>
+            <strong>User types message</strong> in ThreadView input field
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">4.</span>
+            <strong>User clicks "Send"</strong>
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">5.</span>
+            <strong>ThreadView</strong> calls onSend(text) callback
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">6.</span>
+            <strong>Chat.jsx</strong> runs postMessage(threadId, text)
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">7.</span>
+            <strong>postMessage()</strong> creates new message object with
+            unique ID and timestamp
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">8.</span>
+            <strong>Chat.jsx</strong> finds correct thread and appends message
+            to its messages array
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">9.</span>
+            <strong>React</strong> detects state change and re-renders
+            ThreadView
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">10.</span>
+            <strong>User sees</strong> their message appear in the conversation!
+          </div>
+
+          <div
+            style="
+              margin-top: 20px;
+              padding: 15px;
+              background: rgba(46, 204, 113, 0.1);
+              border-left: 3px solid #2ecc71;
+              border-radius: 5px;
+            "
+          >
+            <strong style="color: #2ecc71">Database (Future):</strong> Step 8
+            will INSERT into <span class="db-field">messages</span> table with
+            thread_id, sender_id, content, and timestamp
+          </div>
+        </div>
+
+        <div class="flow-diagram">
+          <h2 style="color: #fff; margin-bottom: 20px">🔀 Switching Pages</h2>
+
+          <div class="flow-step">
+            <span class="flow-step-number">1.</span>
+            <strong>User taps</strong> "Chat" button in MenuBar (bottom
+            navigation)
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">2.</span>
+            <strong>MenuBar</strong> calls onClick callback for Chat button
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">3.</span>
+            <strong>Callback executes:</strong> setRoute("chat")
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">4.</span>
+            <strong>App.jsx</strong> route state updates from "chores" to "chat"
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">5.</span>
+            <strong>React</strong> detects state change and triggers re-render
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">6.</span>
+            <strong>App.jsx</strong> evaluates pages[route] → pages["chat"] →
+            returns Chat.jsx component
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">7.</span>
+            <strong>React unmounts</strong> Chores.jsx and mounts Chat.jsx
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">8.</span>
+            <strong>MenuBar updates</strong> - Chat button now shows as active
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">9.</span>
+            <strong>User sees</strong> Chat page with conversation threads!
+          </div>
+
+          <div
+            style="
+              margin-top: 20px;
+              padding: 15px;
+              background: rgba(231, 76, 60, 0.1);
+              border-left: 3px solid #e74c3c;
+              border-radius: 5px;
+            "
+          >
+            <strong style="color: #e74c3c">Important:</strong> When switching
+            pages, component state is lost. Chores page data is reset when you
+            leave and come back.
+          </div>
+        </div>
+
+        <div class="flow-diagram">
+          <h2 style="color: #fff; margin-bottom: 20px">🗑️ Deleting a Chore</h2>
+
+          <div class="flow-step">
+            <span class="flow-step-number">1.</span>
+            <strong>User clicks</strong> on a chore block in ChoresWidget
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">2.</span>
+            <strong>ChoresWidget</strong> calls onBlockClick(chore) callback
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">3.</span>
+            <strong>Chores.jsx</strong> sets selectedChore = chore object
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">4.</span>
+            <strong>ChoresPopup modal</strong> appears showing chore details
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">5.</span>
+            <strong>User clicks "Abandon" or "Finish"</strong> button
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">6.</span>
+            <strong>ChoresPopup</strong> calls onDelete(chore) callback
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">7.</span>
+            <strong>Chores.jsx</strong> runs deleteChore(chore)
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">8.</span>
+            <strong>deleteChore()</strong> filters out chore from ALL roommates
+            by matching chore.id
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">9.</span>
+            <strong>Chores.jsx</strong> updates roommates state (immutably)
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">10.</span>
+            <strong>If deleted chore was selected:</strong> Close popup by
+            setting selectedChore = null
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">11.</span>
+            <strong>React</strong> re-renders all ChoresWidget components
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">12.</span>
+            <strong>User sees</strong> chore removed from all lists and popup
+            closed!
+          </div>
+
+          <div
+            style="
+              margin-top: 20px;
+              padding: 15px;
+              background: rgba(46, 204, 113, 0.1);
+              border-left: 3px solid #2ecc71;
+              border-radius: 5px;
+            "
+          >
+            <strong style="color: #2ecc71">Database (Future):</strong> Step 8
+            will DELETE from <span class="db-field">chores</span> table and all
+            related records in
+            <span class="db-field">chore_assignments</span> table
+          </div>
+        </div>
+
+        <div class="flow-diagram">
+          <h2 style="color: #fff; margin-bottom: 20px">🆓 Freeing a Machine</h2>
+
+          <div class="flow-step">
+            <span class="flow-step-number">1.</span>
+            <strong>User clicks</strong> on a machine they're currently using
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">2.</span>
+            <strong>Machine.jsx</strong> opens MachineInfo modal
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">3.</span>
+            <strong>Machine.jsx calculates:</strong> canFinish = (status ===
+            "busy" AND occupiedBy === "You")
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">4.</span>
+            <strong>MachineInfo</strong> shows "Finish" button (because
+            canFinish = true)
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">5.</span>
+            <strong>User clicks "Finish"</strong>
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">6.</span>
+            <strong>MachineInfo</strong> calls onFinish() callback
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">7.</span>
+            <strong>Machine.jsx</strong> runs requestFinish(id)
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">8.</span>
+            <strong>requestFinish()</strong> validates: is machine busy AND is
+            current user the occupier?
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step" style="background: rgba(46, 204, 113, 0.1)">
+            <span class="flow-step-number">9.</span>
+            <strong>If authorized:</strong> Updates machine state: status =
+            "available", occupiedBy = ""
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">10.</span>
+            <strong>Machine.jsx</strong> shows toast "Machine freed" and closes
+            modal
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">11.</span>
+            <strong>React</strong> re-renders MachineWidget (now shows
+            "Available")
+          </div>
+          <div class="flow-arrow">↓</div>
+
+          <div class="flow-step">
+            <span class="flow-step-number">12.</span>
+            <strong>User sees</strong> machine is now free for others to use!
+          </div>
+
+          <div
+            style="
+              margin-top: 20px;
+              padding: 15px;
+              background: rgba(46, 204, 113, 0.1);
+              border-left: 3px solid #2ecc71;
+              border-radius: 5px;
+            "
+          >
+            <strong style="color: #2ecc71">Database (Future):</strong> Step 9
+            will UPDATE <span class="db-field">machines</span> table, setting
+            occupied_by = NULL
+          </div>
+        </div>
+
+        <div class="click-hint">
+          💡 These flows show the complete journey from user action to screen
+          update
+        </div>
+      </div>
+    </div>
+    <script src="script.js"></script>
+  </body>
+</html>
