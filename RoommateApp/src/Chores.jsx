@@ -89,7 +89,7 @@ export default function Chores({ householdId }) {
     // Base widgets (always show)
     const baseRoommates = profiles.map((p) => ({
       id: p.id,
-      name: p.display_name || "Unnamed",
+      name: p.id === user.id ? "You" : (p.display_name || "Unnamed"),
       chores: [],
     }));
     setRoommates(baseRoommates);
@@ -124,7 +124,7 @@ export default function Chores({ householdId }) {
     // Build updated list
     const updated = profiles.map((p) => ({
       id: p.id,
-      name: p.display_name || "Unnamed",
+      name: p.id === user.id ? "You" : (p.display_name || "Unnamed"),
       chores: [],
     }));
 
