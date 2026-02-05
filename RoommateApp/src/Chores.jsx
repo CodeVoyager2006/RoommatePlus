@@ -122,6 +122,8 @@ export default function Chores({ householdId }) {
         description: chore.description,
         peopleAssigned: assignedNames,
         status: chore.status,
+        assigneeIds: assignedProfileIds,
+        repeatDays: []
       };
 
       for (const pid of assignedProfileIds) {
@@ -211,9 +213,165 @@ export default function Chores({ householdId }) {
         roommates={roommates.map((r) => ({ id: r.id, name: r.name }))}
         onClose={() => setIsCreateOpen(false)}
         onCreate={async (payload) => {
-          // insert chore + assignments here (same logic you used previously)
-          // then: await loadData();
-        }}
+  try {
+    // ---- 0) Preconditions ----
+    if (!resolvedHouseholdId) {
+      console.error("[CreateChores] No resolvedHouseholdId; cannot create chore.", {
+        resolvedHouseholdId,
+      });
+      return;
+    }
+
+    // ---- 1) Normalize inputs ----
+    const name = (payload?.name ?? payload?.title ?? "").trim();
+    const description = (payload?.description ?? "").trim() || null;
+    const due_date = payload?.due_date ?? payload?.dueDate ?? null;
+
+    if (!name) {
+      console.error("[CreateChores] Missing chore name/title.", { payload });
+      return;
+    }
+
+    // Accept multiple possible shapes from CreateChores:
+    // - payload.assigneeIds: ["uuid", ...]
+    // - payload.assignees / payload.assignedTo / payload.selectedRoommates: ["uuid", ...] OR [{id,...}, ...]
+    const rawAssignees =
+      payload?.assigneeIds ??
+      payload?.assignees ??
+      payload?.assignedTo ??
+      payload?.selectedRoommates;
+
+    if (!Array.isArray(rawAssignees)) {
+      console.error(
+        "[CreateChores] Assignees missing or not an array. Expected payload.assigneeIds/assignees/assignedTo/selectedRoommates to be an array.",
+        { payload }
+      );
+      return;
+    }
+
+    const assignees = rawAssignees
+      .map((a) => (typeof a === "object" && a !== null ? a.id : a))
+      .filter(Boolean);
+
+    if (assignees.length === 0) {
+      console.error("[CreateChores] Assignees array is empty after normalization.", {
+        rawAssignees,
+        payload,
+      });
+      return;
+    }
+
+    // ---- 2) Snapshot current assignment count for this household (before) ----
+    // Count chore_assignments linked to chores in this household
+    const { count: beforeCount, error: beforeErr } = await supabase
+      .from("chore_assignments")
+      .select("chore_id", { count: "exact", head: true })
+      .in(
+        "chore_id",
+        (
+          await supabase
+            .from("chores")
+            .select("id")
+            .eq("household_id", resolvedHouseholdId)
+        ).data?.map((c) => c.id) ?? []
+      );
+
+    if (beforeErr) {
+      console.warn("[CreateChores] Could not compute beforeCount for chore_assignments.", beforeErr);
+    }
+
+    // ---- 3) Insert chore ----
+    const { data: newChore, error: choreErr } = await supabase
+      .from("chores")
+      .insert({
+        household_id: resolvedHouseholdId,
+        name,
+        description,
+        due_date,
+        status: "ongoing",
+      })
+      .select("id")
+      .single();
+
+    if (choreErr) {
+      console.error("[CreateChores] chore insert error:", choreErr);
+      return;
+    }
+
+    // ---- 4) Insert assignments (required) ----
+    const rows = assignees.map((profile_id) => ({
+      chore_id: newChore.id,
+      profile_id,
+    }));
+
+    const { error: assignErr } = await supabase.from("chore_assignments").insert(rows);
+
+    if (assignErr) {
+      console.error("[CreateChores] assignment insert error:", assignErr, { rows });
+      return;
+    }
+
+    // ---- 5) Verify table size changed (after) ----
+    // We check if assignments exist for this chore; and also compare counts when beforeCount was available.
+    const { count: afterCount, error: afterErr } = await supabase
+      .from("chore_assignments")
+      .select("chore_id", { count: "exact", head: true })
+      .in(
+        "chore_id",
+        (
+          await supabase
+            .from("chores")
+            .select("id")
+            .eq("household_id", resolvedHouseholdId)
+        ).data?.map((c) => c.id) ?? []
+      );
+
+    if (afterErr) {
+      console.warn("[CreateChores] Could not compute afterCount for chore_assignments.", afterErr);
+    }
+
+    const { data: verifyRows, error: verifyErr } = await supabase
+      .from("chore_assignments")
+      .select("chore_id, profile_id")
+      .eq("chore_id", newChore.id);
+
+    if (verifyErr) {
+      console.warn("[CreateChores] Could not verify inserted chore_assignments rows.", verifyErr);
+    }
+
+    const sizeChanged =
+      typeof beforeCount === "number" &&
+      typeof afterCount === "number" &&
+      afterCount > beforeCount;
+
+    const hasRowsForChore = Array.isArray(verifyRows) && verifyRows.length > 0;
+
+    if (sizeChanged || hasRowsForChore) {
+      console.log("chores assignments is updated", {
+        beforeCount,
+        afterCount,
+        insertedForChore: verifyRows?.length ?? null,
+        chore_id: newChore.id,
+      });
+    } else {
+      console.warn("[CreateChores] Expected chore_assignments to change but did not detect it.", {
+        beforeCount,
+        afterCount,
+        verifyRows,
+        chore_id: newChore.id,
+      });
+      // Treat as error condition per your requirement
+      return;
+    }
+
+    // ---- 6) Close + refresh ----
+    setIsCreateOpen(false);
+    await loadData();
+  } catch (e) {
+    console.error("[CreateChores] onCreate fatal error:", e, { payload });
+  }
+}}
+
       />
     </main>
   );
