@@ -3,27 +3,35 @@ import ChoresBlock from "./ChoresBlock";
 import "./ChoresComponent.css";
 
 /**
- * @param {{roommate:{name:string, chores:any[]}, onBlockClick?:(chore:any)=>void}} props
+ * ChoresWidget
+ * Props:
+ * - roommate: { id?: string, name: string, chores: any[] }
+ * - onBlockClick?: (chore: any) => void
  */
 export default function ChoresWidget({ roommate, onBlockClick }) {
+  const name = roommate?.name || "Roommate";
+  const chores = Array.isArray(roommate?.chores) ? roommate.chores : [];
+
   return (
-    <section className="chores-widget" aria-label={`Chores for ${roommate.name}`}>
-      <h3 className="widget-title">{roommate.name}</h3>
+    <section className="chores-widget" aria-label={`Chores for ${name}`}>
+      <h3 className="widget-title">{name}</h3>
+
       <div className="chores-list">
-        {roommate.chores.length === 0 ? (
+        {chores.length === 0 ? (
           <div className="empty">No chores assigned</div>
         ) : (
-          roommate.chores.map((c) => (
+          chores.map((c) => (
             <ChoresBlock
-              key={c.id || `${c.title}-${c.dueDate}`}  // ✅ FIX: stable key
-              title={c.title}
-              dueDate={c.dueDate}
-              description={c.description}
-              peopleAssigned={c.peopleAssigned}
-              onClick={() =>
-                onBlockClick &&
-                onBlockClick({ ...c, roommateName: roommate.name }) // keeps id + adds owner label
-              }
+              key={c?.id || `${c?.title || "chore"}-${c?.dueDate || "nodate"}`}
+              title={c?.title}
+              dueDate={c?.dueDate}
+              description={c?.description}
+              peopleAssigned={c?.peopleAssigned}
+              onClick={() => {
+                if (typeof onBlockClick === "function") {
+                  onBlockClick({ ...c, roommateName: name });
+                }
+              }}
             />
           ))
         )}

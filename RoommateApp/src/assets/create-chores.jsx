@@ -1,61 +1,76 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import "./create-chores.css";
+// create-chores.jsx
+import React, { useEffect, useMemo, useState } from "react";
+import "./ChoresComponent.css";
 
 /**
  * CreateChores (modal)
  * Props:
  * - isOpen: boolean
- * - roommates: { name: string }[]
- * - onCreate: (newChore: {title, description, dueDate, peopleAssigned, repeatDays}) => Promise<void> | void
+ * - roommates: { id: string, name: string }[]
+ * - me: { id: string, name: string } | null
+ * - onCreate: (newChore: { title, description, dueDate, assigneeIds: string[], repeatDays: string[] }) => Promise<void> | void
  * - onClose: () => void
  */
-export default function CreateChores({ isOpen, roommates = [], onCreate, onClose }) {
+export default function CreateChores({
+  isOpen,
+  roommates = [],
+  me = null,
+  onCreate,
+  onClose,
+}) {
+  const dayOrder = useMemo(
+    () => ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    []
+  );
+
+  // Build assignable list using IDs (required for chore_assignments.profile_id)
   const assignablePeople = useMemo(() => {
-    const names = roommates.map((r) => r.name);
-    return Array.from(new Set(["You", ...names]));
-  }, [roommates]);
+    const map = new Map();
+
+    // Roommates
+    for (const r of roommates) {
+      if (r?.id) {
+        map.set(r.id, { id: r.id, name: r.name || "Unnamed" });
+      }
+    }
+
+    // Ensure "me" included
+    if (me?.id) {
+      map.set(me.id, { id: me.id, name: me.name || "You" });
+    }
+
+    return Array.from(map.values());
+  }, [roommates, me]);
 
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState(""); // OPTIONAL
-  const [dueDate, setDueDate] = useState(""); // REQUIRED (yyyy-mm-dd)
-  const [assignedTo, setAssignedTo] = useState([]); // REQUIRED (>=1)
-  const [repeatDays, setRepeatDays] = useState([]); // OPTIONAL
+  const [description, setDescription] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [assignedToIds, setAssignedToIds] = useState([]); // UUIDs
+  const [repeatDays, setRepeatDays] = useState([]);
+
   const [errors, setErrors] = useState({});
   const [showAssignPicker, setShowAssignPicker] = useState(false);
 
   const [showClosePrompt, setShowClosePrompt] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Single native date input (ONLY ONE LINE)
-  const dateInputRef = useRef(null);
-  const openNativeDatePicker = () => {
-    const el = dateInputRef.current;
-    if (!el) return;
-
-    if (typeof el.showPicker === "function") {
-      el.showPicker();
-    } else {
-      el.focus();
-      el.click();
-    }
-  };
-
   const isDirty = useMemo(() => {
     return (
       title.trim() ||
       description.trim() ||
       dueDate ||
-      assignedTo.length > 0 ||
+      assignedToIds.length > 0 ||
       repeatDays.length > 0
     );
-  }, [title, description, dueDate, assignedTo, repeatDays]);
+  }, [title, description, dueDate, assignedToIds, repeatDays]);
 
+  // Reset form when opened
   useEffect(() => {
     if (!isOpen) return;
     setTitle("");
     setDescription("");
     setDueDate("");
-    setAssignedTo([]);
+    setAssignedToIds([]);
     setRepeatDays([]);
     setErrors({});
     setShowAssignPicker(false);
@@ -65,29 +80,29 @@ export default function CreateChores({ isOpen, roommates = [], onCreate, onClose
 
   if (!isOpen) return null;
 
-  // REQUIRED: title, dueDate, assignedTo
-  // OPTIONAL: description, repeatDays
   const validate = () => {
     const next = {};
     if (!title.trim()) next.title = "Chore title is required.";
     if (!dueDate) next.dueDate = "Expected finish time is required.";
-    if (!assignedTo.length) next.assignedTo = "Assign at least one person.";
+    if (assignedToIds.length === 0) next.assignedTo = "Assign at least one person.";
     setErrors(next);
     return Object.keys(next).length === 0;
   };
 
-  const toggleAssigned = (name) => {
-    setAssignedTo((prev) =>
-      prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]
+  const toggleAssigned = (id) => {
+    setAssignedToIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   };
 
-  const dayOrder = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const toggleDay = (day) => {
-    setRepeatDays((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]));
+  const toggleRepeat = (day) => {
+    setRepeatDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+    );
   };
 
-  const onRequestClose = () => {
+  const requestClose = () => {
+    if (isSaving) return;
     if (!isDirty) {
       onClose?.();
       return;
@@ -95,7 +110,7 @@ export default function CreateChores({ isOpen, roommates = [], onCreate, onClose
     setShowClosePrompt(true);
   };
 
-  const discardAndClose = () => {
+  const confirmCloseDiscard = () => {
     setShowClosePrompt(false);
     onClose?.();
   };
@@ -108,186 +123,172 @@ export default function CreateChores({ isOpen, roommates = [], onCreate, onClose
       title: title.trim(),
       description: description.trim(), // optional
       dueDate,
-      peopleAssigned: assignedTo,
-      repeatDays: dayOrder.filter((d) => repeatDays.includes(d)), // optional
+      assigneeIds: assignedToIds,
+      repeatDays: dayOrder.filter((d) => repeatDays.includes(d)),
     };
 
+    setIsSaving(true);
     try {
-      setIsSaving(true);
       await Promise.resolve(onCreate?.(payload));
-      setShowClosePrompt(false);
-      onClose?.();
     } catch (e) {
+      console.error("[CreateChores] onCreate failed:", e);
       setErrors((prev) => ({
         ...prev,
-        backend: typeof e?.message === "string" ? e.message : "Failed to save chore.",
+        submit: e?.message || "Failed to create chore. Check console/logs.",
       }));
-    } finally {
       setIsSaving(false);
+      return;
     }
+    setIsSaving(false);
+  };
+
+  const renderAssignedAvatars = () => {
+    if (assignedToIds.length === 0) return <span className="cc-muted">None selected</span>;
+
+    return assignedToIds.map((id) => {
+      const person = assignablePeople.find((p) => p.id === id);
+      const name = person?.name || "U";
+      const letter = name.replace(/[^A-Za-z0-9]/g, "").slice(0, 1).toUpperCase() || "U";
+      return (
+        <span key={id} className="cc-avatar" title={name} aria-label={name}>
+          {letter}
+        </span>
+      );
+    });
   };
 
   return (
-    <div className="cc-overlay" role="dialog" aria-modal="true" aria-label="Create chore">
-      <div className="cc-sheet">
-        <button type="button" className="cc-close" aria-label="Close" onClick={onRequestClose}>
+    <div className="chore-popup-overlay" role="dialog" aria-modal="true">
+      <div className="chore-popup">
+        <button type="button" className="chore-popup-close" onClick={requestClose} aria-label="Close">
           ×
         </button>
 
-        <div className="cc-content">
-          {/* Title (required) */}
-          <div className="cc-field">
-            <label className="cc-label">Title of chores</label>
-            <input
-              className={`cc-input ${errors.title ? "cc-input-error" : ""}`}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Title"
-            />
-            {errors.title && <div className="cc-error">{errors.title}</div>}
-          </div>
+        <h3 className="chore-popup-title">Create a chore</h3>
 
-          {/* Description (optional) */}
-          <div className="cc-field">
-            <label className="cc-label">Description of the chores (optional)</label>
-            <textarea
-              className="cc-textarea"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Description"
-              rows={4}
-            />
-          </div>
+        <div className="cc-field">
+          <label className="cc-label">Chore name</label>
+          <input
+            className={`cc-input ${errors.title ? "cc-input-error" : ""}`}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. Take out trash"
+          />
+          {errors.title && <div className="cc-error">{errors.title}</div>}
+        </div>
 
-          {/* Expected finish time (required) */}
-          <div className="cc-field cc-row">
-            <div className="cc-row-left">
-              <label className="cc-label">Expected finish time</label>
+        <div className="cc-field">
+          <label className="cc-label">Description (optional)</label>
+          <textarea
+            className="cc-textarea"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Extra details..."
+            rows={3}
+          />
+        </div>
 
-              {/* ONLY ONE INPUT LINE (type="date") */}
-              <input
-                ref={dateInputRef}
-                type="date"
-                className={`cc-input cc-date-input ${errors.dueDate ? "cc-input-error" : ""}`}
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                aria-label="Expected finish date"
-              />
+        <div className="cc-field">
+          <label className="cc-label">Expected finish time</label>
+          <input
+            type="date"
+            className={`cc-input ${errors.dueDate ? "cc-input-error" : ""}`}
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+          />
+          {errors.dueDate && <div className="cc-error">{errors.dueDate}</div>}
+        </div>
 
-              {errors.dueDate && <div className="cc-error">{errors.dueDate}</div>}
+        <div className="cc-field">
+          <label className="cc-label">Assign to</label>
+
+          <div className={`cc-assign ${errors.assignedTo ? "cc-assign-error" : ""}`}>
+            <div className="cc-assign-avatars" aria-label="Assigned people">
+              {renderAssignedAvatars()}
             </div>
 
-            <div className="cc-row-right">
-              <button
-                type="button"
-                className="cc-calendar-pill"
-                onClick={openNativeDatePicker}
-                aria-label="Open calendar"
-              >
-                Calendar
-              </button>
-            </div>
-          </div>
-
-          {/* Assign to (required) */}
-          <div className="cc-field">
-            <label className="cc-label">Assign to</label>
-
-            <div className={`cc-assign ${errors.assignedTo ? "cc-assign-error" : ""}`}>
-              <div className="cc-assign-avatars" aria-label="Assigned people">
-                {assignedTo.length === 0 ? (
-                  <span className="cc-muted">None selected</span>
-                ) : (
-                  assignedTo.map((name) => (
-                    <span key={name} className="cc-avatar" title={name} aria-label={name}>
-                      {name === "You"
-                        ? "Y"
-                        : name.replace(/[^A-Za-z0-9]/g, "").slice(0, 1).toUpperCase()}
-                    </span>
-                  ))
-                )}
-              </div>
-
-              <button
-                type="button"
-                className="cc-assign-plus"
-                aria-label="Add or remove assignees"
-                onClick={() => setShowAssignPicker((s) => !s)}
-              >
-                +
-              </button>
-            </div>
+            <button
+              type="button"
+              className="cc-assign-toggle"
+              onClick={() => setShowAssignPicker((v) => !v)}
+              disabled={isSaving}
+            >
+              {showAssignPicker ? "Done" : "Select"}
+            </button>
 
             {errors.assignedTo && <div className="cc-error">{errors.assignedTo}</div>}
 
             {showAssignPicker && (
               <div className="cc-assign-picker" role="listbox" aria-label="Choose assignees">
-                {assignablePeople.map((name) => (
-                  <label key={name} className="cc-check">
-                    <input
-                      type="checkbox"
-                      checked={assignedTo.includes(name)}
-                      onChange={() => toggleAssigned(name)}
-                    />
-                    <span>{name}</span>
-                  </label>
-                ))}
+                {assignablePeople.length === 0 ? (
+                  <div className="cc-muted">No roommates found.</div>
+                ) : (
+                  assignablePeople.map((p) => (
+                    <label key={p.id} className="cc-check">
+                      <input
+                        type="checkbox"
+                        checked={assignedToIds.includes(p.id)}
+                        onChange={() => toggleAssigned(p.id)}
+                        disabled={isSaving}
+                      />
+                      <span>{p.name}</span>
+                    </label>
+                  ))
+                )}
               </div>
             )}
           </div>
+        </div>
 
-          {/* Repeat (optional) */}
-          <div className="cc-field">
-            <label className="cc-label">Repeat (optional)</label>
-            <div className="cc-repeat">
-              <div className="cc-repeat-days">
-                {dayOrder.map((d) => (
-                  <button
-                    key={d}
-                    type="button"
-                    className={`cc-day ${repeatDays.includes(d) ? "cc-day-on" : ""}`}
-                    onClick={() => toggleDay(d)}
-                    aria-pressed={repeatDays.includes(d)}
-                  >
-                    {d}
-                  </button>
-                ))}
-              </div>
-
-              <div className="cc-repeat-summary">
-                {repeatDays.length ? dayOrder.filter((d) => repeatDays.includes(d)).join(", ") : "No repeat selected"}
-                <span className="cc-chevron">›</span>
-              </div>
-            </div>
-          </div>
-
-          {errors.backend && <div className="cc-error cc-error-wide">{errors.backend}</div>}
-
-          <div className="cc-actions">
-            <button type="button" className="cc-save" onClick={handleSave} disabled={isSaving}>
-              {isSaving ? "Saving..." : "Save"}
-            </button>
+        <div className="cc-field">
+          <label className="cc-label">Repeat (optional)</label>
+          <div className="cc-days">
+            {dayOrder.map((d) => (
+              <button
+                key={d}
+                type="button"
+                className={`cc-day ${repeatDays.includes(d) ? "cc-day-on" : ""}`}
+                onClick={() => toggleRepeat(d)}
+                disabled={isSaving}
+              >
+                {d}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Close confirmation */}
-        {showClosePrompt && (
-          <div className="cc-confirm-overlay" role="alertdialog" aria-modal="true" aria-label="Save chore before closing?">
-            <div className="cc-confirm">
-              <div className="cc-confirm-title">Save this chore?</div>
-              <div className="cc-confirm-text">
-                You have unsaved changes. Choose Save to keep it, or Discard to close without saving.
-              </div>
+        {errors.submit && <div className="cc-error cc-submit-error">{errors.submit}</div>}
 
-              <div className="cc-confirm-actions">
-                <button type="button" className="cc-confirm-btn" onClick={() => setShowClosePrompt(false)}>
-                  Cancel
+        <div className="cc-actions">
+          <button type="button" className="cc-btn" onClick={requestClose} disabled={isSaving}>
+            Cancel
+          </button>
+          <button type="button" className="cc-btn primary" onClick={handleSave} disabled={isSaving}>
+            {isSaving ? "Saving..." : "Save"}
+          </button>
+        </div>
+
+        {showClosePrompt && (
+          <div className="chore-action-overlay" role="presentation">
+            <div className="chore-action-card">
+              <div className="chore-action-title">Discard changes?</div>
+              <div className="chore-action-hint">
+                You have unsaved changes. Closing will discard them.
+              </div>
+              <div className="chore-action-buttons">
+                <button
+                  type="button"
+                  className="chore-action-small"
+                  onClick={() => setShowClosePrompt(false)}
+                >
+                  Keep editing
                 </button>
-                <button type="button" className="cc-confirm-btn danger" onClick={discardAndClose}>
+                <button
+                  type="button"
+                  className="chore-action-small danger"
+                  onClick={confirmCloseDiscard}
+                >
                   Discard
-                </button>
-                <button type="button" className="cc-confirm-btn primary" onClick={handleSave} disabled={isSaving}>
-                  {isSaving ? "Saving..." : "Save"}
                 </button>
               </div>
             </div>
