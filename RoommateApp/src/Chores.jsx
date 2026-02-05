@@ -195,7 +195,13 @@ export default function Chores({ householdId }) {
           <ChoresWidget key={r.id} roommate={r} onBlockClick={handleBlockClick} />
         ))}
       </div>
-
+      <button
+          type="button"
+          className="chores-fab"
+          onClick={() => setIsCreateOpen(true)}
+        >
+          +
+      </button>
       {selectedChore && (
         <ChoresPopup chore={selectedChore} onClose={closePopup} onDelete={handleChoreAction} />
       )}
