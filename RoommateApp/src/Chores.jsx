@@ -97,7 +97,7 @@ export default function Chores({ householdId }) {
       // 4) Build roommates list immediately so widgets show even with zero chores
       const baseRoommates = profiles.map((p) => ({
         id: p.id,
-        name: p.display_name || "Unnamed",
+        name: p.id === user.id ? "You" : (p.display_name || "Unnamed"),
         chores: [],
       }));
       console.log("[Chores] roommates (base)", baseRoommates);
@@ -137,7 +137,7 @@ export default function Chores({ householdId }) {
       // 8) Build chores per roommate
       const updated = profiles.map((p) => ({
         id: p.id,
-        name: p.display_name || "Unnamed",
+        name: p.id === user.id ? "You" : (p.display_name || "Unnamed"),
         chores: [],
       }));
 
