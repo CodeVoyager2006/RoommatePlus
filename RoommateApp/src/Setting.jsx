@@ -4,7 +4,7 @@ import { supabase } from "./supabaseClient";
 /**
  * Settings page:
  * - Displays user settings and account management options
- * - Allows user to leave their household (signs out after leaving)
+ * - Allows user to leave their household (redirects to house setup)
  * - Allows user to sign out of their account
  */
 export default function Setting() {
@@ -28,16 +28,16 @@ export default function Setting() {
   };
 
   /**
-   * Removes the user from their current household and signs them out
+   * Removes the user from their current household
    * Calls the leave_household() PostgreSQL function which:
    * - Deletes all chore assignments for the user
    * - Sets user's household_id to NULL
    * - Preserves the household and chores for other members
-   * Then automatically signs the user out and returns to login page
+   * Then redirects user to house setup page
    */
   const handleLeaveHouse = async () => {
     // Show native browser confirmation dialog
-    if (!confirm("Are you sure you want to leave your household? This will remove all your chore assignments and sign you out.")) {
+    if (!confirm("Are you sure you want to leave your household? This will remove all your chore assignments.")) {
       return;
     }
 
@@ -55,10 +55,8 @@ export default function Setting() {
 
       alert("Successfully left household!");
       
-      // Sign out the user after leaving household
-      await supabase.auth.signOut();
-      
-      // Reload page to return to login
+      // Reload page to trigger house setup flow
+      // The app will detect household_id is NULL and show house setup
       window.location.reload();
     } catch (error) {
       alert("Error leaving household: " + error.message);
