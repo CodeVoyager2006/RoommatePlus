@@ -137,6 +137,16 @@ main {
   white-space: normal;
 }
 
+.chores-block .repeat-days-row {
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+  margin-top: 4px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
 .people-row {
   font-size: 13px;
   display: flex;
