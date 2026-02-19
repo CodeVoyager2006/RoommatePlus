@@ -1,7 +1,9 @@
 /* ===== Minimal viewport / reset fix (place at top of ChoresComponent.css) ===== */
 
 /* Remove default body margins that create the visible gap */
-html, body, #root {
+html,
+body,
+#root {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -11,7 +13,9 @@ html, body, #root {
 }
 
 /* Make the chores page occupy the full viewport and respect device safe areas */
-.chores-page, .app, main {
+.chores-page,
+.app,
+main {
   min-height: 100vh; /* ensure page fills full height */
   width: 100%;
   margin: 0;
@@ -22,9 +26,8 @@ html, body, #root {
   box-sizing: border-box;
 }
 
-
 /* Variables */
-:root{
+:root {
   --bg: #ffffff;
   --card: #e5e5e5;
   --muted: #6b6b6b;
@@ -35,7 +38,6 @@ html, body, #root {
   --block-width: 220px;
 }
 
-
 /* ===== PAGE CONTAINER ===== */
 
 .chores-page {
@@ -44,7 +46,6 @@ html, body, #root {
   color: var(--accent);
   box-sizing: border-box;
 }
-
 
 /* ===== MULTIPLE WIDGETS ===== */
 
@@ -55,7 +56,6 @@ html, body, #root {
   width: 100%;
   box-sizing: border-box;
 }
-
 
 /* ===== SINGLE WIDGET ===== */
 
@@ -79,7 +79,6 @@ html, body, #root {
   font-weight: 600;
 }
 
-
 /* ===== HORIZONTAL BLOCK LIST INSIDE WIDGET ===== */
 
 .chores-list {
@@ -99,7 +98,6 @@ html, body, #root {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
 }
-
 
 /* ===== CHORES BLOCK STYLE (vertical internal layout) ===== */
 
@@ -134,6 +132,9 @@ html, body, #root {
   font-size: 13px;
   color: #333;
   line-height: 1.25;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
 }
 
 .people-row {
@@ -144,7 +145,6 @@ html, body, #root {
   flex-wrap: wrap;
   color: var(--accent);
 }
-
 
 /* ===== RESPONSIVE ===== */
 
@@ -225,8 +225,8 @@ html, body, #root {
   height: 56px;
   border-radius: 50%;
   border: none;
-  background: #6fa86f;      /* solid green */
-  color: #ffffff;           /* white + icon */
+  background: #6fa86f; /* solid green */
+  color: #ffffff; /* white + icon */
   font-size: 32px;
   font-weight: 700;
   line-height: 1;
