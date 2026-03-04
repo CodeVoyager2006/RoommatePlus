@@ -1,0 +1,72 @@
+/* Setting.css */
+
+.setting-page {
+  padding: 20px;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+
+  /* keep these if you’re offsetting a fixed header + bottom nav */
+  padding-top: calc(var(--app-header-height) + 16px);
+  padding-left: 14px;
+  padding-right: 14px;
+  padding-bottom: calc(var(--app-bottomnav-height) + 120px);
+
+  min-height: 100vh;
+  background: var(--bg);
+  box-sizing: border-box;
+}
+
+.setting-title {
+  margin: 0 0 12px 0;
+}
+
+.setting-actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* shared button base */
+.btn {
+  padding: 12px 24px;
+  font-size: 16px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Leave House */
+.btn-outline-danger {
+  background-color: #ffffff;
+  color: #dc2626;
+  border: 2px solid #dc2626;
+}
+
+/* Sign Out */
+.btn-danger {
+  background-color: #dc2626;
+  color: white;
+  border: none;
+}
+
+.invite-section {
+  margin-top: 20px;
+}
+
+.invite-title {
+  margin: 0 0 8px 0;
+}
+
+.invite-code {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}

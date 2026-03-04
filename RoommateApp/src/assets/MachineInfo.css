@@ -1,136 +1,102 @@
 /* MachineInfo.css */
 
-:root {
-  --app-header-height: 88px;
-}
-
 .mi-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  position: fixed; inset: 0;
+  background: rgba(15,61,15,.38);
+  display: flex; justify-content: center; align-items: flex-start;
   padding: calc(var(--app-header-height) + 16px) 16px 16px;
   z-index: 999;
+  backdrop-filter: blur(2px);
 }
 
 .mi-card {
-  width: 100%;
-  max-width: 520px;
-  background: #ffffff;
-  border-radius: 14px;
-  border: 1px solid #d1d5db;
-  padding: 16px;
-  color: #111;
+  width: 100%; max-width: 520px;
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: 18px;
+  color: var(--text);
   position: relative;
+  box-shadow: var(--shadow-lg);
 }
 
 .mi-close {
-  position: absolute;
-  right: 12px;
-  top: 10px;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 1px solid #d1d5db;
-  background: #ffffff;
-  font-size: 22px;
-  cursor: pointer;
+  position: absolute; right: 12px; top: 12px;
+  width: 34px; height: 34px;
+  border-radius: var(--r-pill);
+  border: 1.5px solid var(--border);
+  background: var(--grey-100);
+  font-size: 20px;
+  color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
 }
+.mi-close:hover { background: var(--danger-light); color: var(--danger); border-color: var(--danger-border); }
 
 .mi-title {
-  font-size: 16px;
-  font-weight: 700;
-  margin-bottom: 12px;
+  font-family: var(--font-ui);
+  font-size: 17px; font-weight: 900;
+  color: var(--green-900);
+  margin-bottom: 14px;
 }
 
 .mi-image {
-  width: 100%;
-  height: 170px;
-  border-radius: 12px;
-  background: #d1d5db;
+  width: 100%; height: 165px;
+  border-radius: var(--r-lg);
+  background: var(--primary-light);
+  border: 1px solid var(--green-200);
   margin-bottom: 14px;
   overflow: hidden;
 }
+.mi-image img { width: 100%; height: 100%; object-fit: cover; }
 
 .mi-row {
-  border: 1px solid #e5e7eb; /* FULL border */
-  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
   padding: 10px 12px;
   margin-bottom: 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #f9fafb;
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--surface);
 }
 
-.mi-label {
-  font-size: 13px;
-  font-weight: 700;
-  color: #111;
-}
+.mi-label { font-family: var(--font-ui); font-size: 13px; font-weight: 800; color: var(--text); }
 
 .mi-pill {
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
   padding: 4px 10px;
-  font-size: 12px;
-  font-weight: 700;
-  background: #ffffff;
+  font-size: 12px; font-weight: 800;
+  font-family: var(--font-ui);
+  background: var(--white);
 }
+.mi-pill.available { color: var(--primary-dark); border-color: var(--green-300); background: var(--primary-light); }
+.mi-pill.busy { color: var(--danger); border-color: #fecaca; background: var(--danger-light); }
 
-.mi-pill.available {
-  color: #15803d;
-}
+.mi-occupied { font-size: 13px; color: var(--muted); font-weight: 600; }
 
-.mi-pill.busy {
-  color: #b91c1c;
-}
+.mi-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
 
-.mi-occupied {
-  font-size: 13px;
-  color: #374151;
-}
-
-.mi-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 16px;
-}
-
-/* Buttons – enforce readable contrast */
 .mi-btn {
-  border-radius: 10px;
-  border: 1px solid #cfd4dc;
-  padding: 10px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-
-  background: #ffffff;
-  color: #111111; /* FIX: force dark text */
+  border-radius: var(--r-md);
+  padding: 10px 16px;
+  font-size: 13px; font-weight: 700;
+  font-family: var(--font-ui);
 }
+.mi-btn.secondary {
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  color: var(--text);
+}
+.mi-btn.secondary:hover { background: var(--surface); }
 
-/* Primary (Occupy) */
 .mi-btn.primary {
-  background: #2563eb; /* blue */
-  color: #ffffff;      /* FIX: visible text */
-  border-color: #2563eb;
+  background: var(--primary);
+  border: 1.5px solid var(--primary);
+  color: var(--white);
 }
-
-/* Disabled Occupy */
+.mi-btn.primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
 .mi-btn.primary:disabled {
-  background: #e5e7eb;
-  color: #9ca3af;
-  border-color: #d1d5db;
+  background: var(--green-200);
+  border-color: var(--green-200);
+  color: var(--green-600);
   cursor: not-allowed;
 }
-
-/* Secondary (Exit) */
-.mi-btn.secondary {
-  background: #ffffff;
-  color: #111111;
-}
-

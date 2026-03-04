@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
+import "./Setting.css";
 
 export default function Setting({ householdId }) {
   const [loading, setLoading] = useState(false);
 
-  const [inviteCode, setInviteCode] = useState("");     // displayed value
+  const [inviteCode, setInviteCode] = useState("");
   const [inviteLoading, setInviteLoading] = useState(true);
 
   useEffect(() => {
@@ -21,13 +22,10 @@ export default function Setting({ householdId }) {
         .from("households")
         .select("invite_code")
         .eq("id", householdId)
-        .single(); // expect exactly 1 row
+        .single();
 
-      if (error) {
-        setInviteCode("Can't retrieve invite code");
-      } else {
-        setInviteCode(data?.invite_code ?? "");
-      }
+      if (error) setInviteCode("Can't retrieve invite code");
+      else setInviteCode(data?.invite_code ?? "");
 
       setInviteLoading(false);
     };
@@ -74,24 +72,14 @@ export default function Setting({ householdId }) {
   };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>Settings</h2>
+    <div className="setting-page">
+      <h2 className="setting-title">Settings</h2>
 
-      <div>
+      <div className="setting-actions">
         <button
           onClick={handleLeaveHouse}
           disabled={loading}
-          style={{
-            padding: "12px 24px",
-            fontSize: "16px",
-            backgroundColor: "#ffffff",
-            color: "#dc2626",
-            border: "2px solid #dc2626",
-            borderRadius: "8px",
-            cursor: loading ? "not-allowed" : "pointer",
-            marginTop: "20px",
-            marginRight: "10px",
-          }}
+          className="btn btn-outline-danger"
         >
           {loading ? "Leaving..." : "Leave House"}
         </button>
@@ -99,24 +87,17 @@ export default function Setting({ householdId }) {
         <button
           onClick={handleSignOut}
           disabled={loading}
-          style={{
-            padding: "12px 24px",
-            fontSize: "16px",
-            backgroundColor: "#dc2626",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
-            cursor: loading ? "not-allowed" : "pointer",
-            marginTop: "20px",
-          }}
+          className="btn btn-danger"
         >
           {loading ? "Signing out..." : "Sign Out"}
         </button>
       </div>
 
-      <div>
-        <h3>Invite code:</h3>
-        <p>{inviteLoading ? "Loading..." : (inviteCode || "—")}</p>
+      <div className="invite-section">
+        <h3 className="invite-title">Invite code:</h3>
+        <p className="invite-code">
+          {inviteLoading ? "Loading..." : inviteCode || "—"}
+        </p>
       </div>
     </div>
   );

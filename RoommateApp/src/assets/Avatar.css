@@ -1,27 +1,28 @@
 /* Avatar.css */
 
 .avatar {
-  border-radius: 999px;
-  border: 1px solid #cbd5e1;
-  background: #e5e7eb;
+  border-radius: var(--r-pill);
+  border: 2px solid rgba(255,255,255,.7);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  flex: 0 0 auto;
+  flex-shrink: 0;
 }
 
 .avatar__text {
-  font-size: 12px;
-  font-weight: 800;
-  color: #111827;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--white);
   user-select: none;
+  line-height: 1;
 }
 
 .avatar--gray {
-  background: #e5e7eb;
+  background: var(--primary);
 }
 
 .avatar--dark {
-  background: #d1d5db;
+  background: var(--green-600);
 }

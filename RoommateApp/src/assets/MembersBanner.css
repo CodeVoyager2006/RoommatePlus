@@ -2,67 +2,49 @@
 
 .mb-banner {
   width: 100%;
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   background: var(--surface);
   color: var(--text);
-  border-radius: 14px;
+  border-radius: var(--r-lg);
   padding: 14px 12px;
   display: grid;
-  grid-template-columns: 86px 1fr 22px;
+  grid-template-columns: 80px 1fr 24px;
   align-items: center;
   cursor: pointer;
-  box-sizing: border-box;
+  box-shadow: var(--shadow-sm);
+  transition: background .18s, box-shadow .18s, border-color .18s;
 }
+.mb-banner:hover {
+  background: var(--primary-light);
+  border-color: var(--green-300);
+  box-shadow: var(--shadow-md);
+}
+.mb-banner:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
 .mb-house {
-  width: 76px;
-  height: 56px;
-  border-radius: 12px;
-  background: #dbeafe;         /* light blue block */
-  border: 1px solid #93c5fd;
+  width: 68px; height: 50px;
+  border-radius: var(--r-md);
+  background: var(--primary-light);
+  border: 1.5px solid var(--green-300);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
 }
 
 .mb-mid {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  align-items: center;
-  justify-content: center;
+  display: flex; flex-direction: column;
+  gap: 8px; align-items: center; justify-content: center;
 }
-
 .mb-title {
-  font-size: 14px;
-  font-weight: 800;
+  font-family: var(--font-ui);
+  font-size: 14px; font-weight: 900;
   color: var(--text);
 }
-
-.mb-avatars {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.mb-avatar {
-  margin-left: -10px;
-}
-
-.mb-avatar:first-child {
-  margin-left: 0;
-}
+.mb-avatars { display: flex; align-items: center; justify-content: center; }
+.mb-avatar { margin-left: -8px; }
+.mb-avatar:first-child { margin-left: 0; }
 
 .mb-chevron {
-  font-size: 22px;
-  color: var(--text);
-  opacity: 1;                   /* was too faint */
-  font-weight: 900;
+  font-size: 20px; font-weight: 900;
+  color: var(--primary-dark);
   text-align: right;
-}
-
-.mb-banner:hover {
-  background: #eef2ff;
-}
-
-.mb-banner:focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: 2px;
 }
