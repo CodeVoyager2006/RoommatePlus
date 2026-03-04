@@ -36,7 +36,7 @@ function AppLayout({ profile }) {
         <Route index element={<Chores householdId={profile.household_id} />} />
         <Route path="chat" element={<Chat />} />
         <Route path="machine" element={<Machine />} />
-        <Route path="setting" element={<Setting />} />
+        <Route path="setting" element={<Setting householdId={profile.household_id}/>} />
         <Route path="*" element={<Navigate to="/app" replace />} />
       </Routes>
     </>
