@@ -64,7 +64,7 @@ export default function Chores({ householdId }) {
       return;
     }
 
-    // Base roommates
+    // Base roommates — mirror the exact same shape used in onCreate's nameToId map
     const baseRoommates = profiles.map((p) => ({
       id: p.id,
       name: p.id === user.id ? "You" : (p.display_name || "Unnamed"),
@@ -72,13 +72,12 @@ export default function Chores({ householdId }) {
     }));
     setRoommates(baseRoommates);
 
-    // Chores
+    // Chores — include repeat_mask so it round-trips back to the UI
     const { data: chores, error: choresError } = await supabase
-    .from("chores")
-    .select("id, name, due_date, description, household_id, status")
-    .eq("household_id", hid)
-    .eq("status", "ongoing");
-
+      .from("chores")
+      .select("id, name, due_date, description, household_id, status, repeat_mask")
+      .eq("household_id", hid)
+      .eq("status", "ongoing");
 
     if (choresError || !chores || chores.length === 0) {
       setLoading(false);
@@ -95,8 +94,11 @@ export default function Chores({ householdId }) {
 
     const safeAssignments = assignmentsError || !assignments ? [] : assignments;
 
+    // Name map — "You" for the current user, display_name for everyone else.
+    // This mirrors what loadData sets on the roommates array so that
+    // ChoresWidget shows consistent names.
     const profileIdToName = new Map(
-      profiles.map((p) => [p.id, p.display_name || "Unnamed"])
+      profiles.map((p) => [p.id, p.id === user.id ? "You" : (p.display_name || "Unnamed")])
     );
 
     const updated = profiles.map((p) => ({
@@ -116,14 +118,15 @@ export default function Chores({ householdId }) {
         .filter(Boolean);
 
       const choreForUI = {
-        id: chore.id,
-        title: chore.name,
-        dueDate: chore.due_date,
-        description: chore.description,
+        id:             chore.id,
+        title:          chore.name,
+        dueDate:        chore.due_date,
+        description:    chore.description,
         peopleAssigned: assignedNames,
-        status: chore.status,
-        assigneeIds: assignedProfileIds,
-        repeatDays: []
+        status:         chore.status,
+        assigneeIds:    assignedProfileIds,
+        repeatDays:     [],
+        repeatBitmask:  chore.repeat_mask ?? 0,  // carry repeat_mask into UI
       };
 
       for (const pid of assignedProfileIds) {
@@ -140,7 +143,7 @@ export default function Chores({ householdId }) {
     loadData();
   }, [loadData]);
 
-  // ✅ THIS IS WHAT ChoresPopup NEEDS
+  // ── Abandon / finish ─────────────────────────────────────────────────────────
   const handleChoreAction = async (chore, meta) => {
     if (!chore?.id) return;
 
@@ -197,13 +200,15 @@ export default function Chores({ householdId }) {
           <ChoresWidget key={r.id} roommate={r} onBlockClick={handleBlockClick} />
         ))}
       </div>
+
       <button
-          type="button"
-          className="chores-fab"
-          onClick={() => setIsCreateOpen(true)}
-        >
-          +
+        type="button"
+        className="chores-fab"
+        onClick={() => setIsCreateOpen(true)}
+      >
+        +
       </button>
+
       {selectedChore && (
         <ChoresPopup chore={selectedChore} onClose={closePopup} onDelete={handleChoreAction} />
       )}
@@ -213,165 +218,216 @@ export default function Chores({ householdId }) {
         roommates={roommates.map((r) => ({ id: r.id, name: r.name }))}
         onClose={() => setIsCreateOpen(false)}
         onCreate={async (payload) => {
-  try {
-    // ---- 0) Preconditions ----
-    if (!resolvedHouseholdId) {
-      console.error("[CreateChores] No resolvedHouseholdId; cannot create chore.", {
-        resolvedHouseholdId,
-      });
-      return;
-    }
+          try {
+            // ---- 0) Preconditions ----
+            if (!resolvedHouseholdId) {
+              console.error("[CreateChores] No resolvedHouseholdId; cannot create chore.", {
+                resolvedHouseholdId,
+              });
+              return;
+            }
 
-    // ---- 1) Normalize inputs ----
-    const name = (payload?.name ?? payload?.title ?? "").trim();
-    const description = (payload?.description ?? "").trim() || null;
-    const due_date = payload?.due_date ?? payload?.dueDate ?? null;
+            // ---- 1) Normalize scalar inputs ----
+            const name        = (payload?.name ?? payload?.title ?? "").trim();
+            const description = (payload?.description ?? "").trim() || null;
+            const due_date    = payload?.due_date ?? payload?.dueDate ?? null;
 
-    if (!name) {
-      console.error("[CreateChores] Missing chore name/title.", { payload });
-      return;
-    }
+            if (!name) {
+              console.error("[CreateChores] Missing chore name/title.", { payload });
+              return;
+            }
 
-    // Accept multiple possible shapes from CreateChores:
-    // - payload.assigneeIds: ["uuid", ...]
-    // - payload.assignees / payload.assignedTo / payload.selectedRoommates: ["uuid", ...] OR [{id,...}, ...]
-    const rawAssignees =
-      payload?.assigneeIds ??
-      payload?.assignees ??
-      payload?.assignedTo ??
-      payload?.selectedRoommates;
+            // ---- 2) Resolve assignees → UUIDs via profiles table -----------------
+            //
+            // payload.peopleAssigned is always an array of display-name strings,
+            // e.g. ["You", "Roommate #1"].
+            //
+            // "You" is the currently logged-in user — resolved via getUser().
+            // All other names are looked up in the profiles table by matching
+            // display_name AND household_id so we never cross household boundaries.
 
-    if (!Array.isArray(rawAssignees)) {
-      console.error(
-        "[CreateChores] Assignees missing or not an array. Expected payload.assigneeIds/assignees/assignedTo/selectedRoommates to be an array.",
-        { payload }
-      );
-      return;
-    }
+            const rawAssignees = payload.peopleAssigned; // display-name strings only
 
-    const assignees = rawAssignees
-      .map((a) => (typeof a === "object" && a !== null ? a.id : a))
-      .filter(Boolean);
+            if (!Array.isArray(rawAssignees) || rawAssignees.length === 0) {
+              console.error("[CreateChores] No assignees were added", { payload });
+              return;
+            }
 
-    if (assignees.length === 0) {
-      console.error("[CreateChores] Assignees array is empty after normalization.", {
-        rawAssignees,
-        payload,
-      });
-      return;
-    }
+            // Get the current user's UUID (resolves "You")
+            const {
+              data: { user: currentUser },
+              error: currentUserErr,
+            } = await supabase.auth.getUser();
 
-    // ---- 2) Snapshot current assignment count for this household (before) ----
-    // Count chore_assignments linked to chores in this household
-    const { count: beforeCount, error: beforeErr } = await supabase
-      .from("chore_assignments")
-      .select("chore_id", { count: "exact", head: true })
-      .in(
-        "chore_id",
-        (
-          await supabase
-            .from("chores")
-            .select("id")
-            .eq("household_id", resolvedHouseholdId)
-        ).data?.map((c) => c.id) ?? []
-      );
+            if (currentUserErr || !currentUser) {
+              console.error("[CreateChores] Could not get current user.", currentUserErr);
+              return;
+            }
 
-    if (beforeErr) {
-      console.warn("[CreateChores] Could not compute beforeCount for chore_assignments.", beforeErr);
-    }
+            // Separate "You" from real display names that need a DB lookup
+            const otherNames = rawAssignees.filter((n) => n !== "You");
 
-    // ---- 3) Insert chore ----
-    const { data: newChore, error: choreErr } = await supabase
-      .from("chores")
-      .insert({
-        household_id: resolvedHouseholdId,
-        name,
-        description,
-        due_date,
-        status: "ongoing",
-      })
-      .select("id")
-      .single();
+            // Query profiles table: match display_name IN otherNames AND household_id
+            // This guarantees we only resolve users who belong to the same household
+            let profileRows = [];
+            if (otherNames.length > 0) {
+              const { data: foundProfiles, error: profileLookupErr } = await supabase
+                .from("profiles")
+                .select("id, display_name")
+                .eq("household_id", resolvedHouseholdId)
+                .in("display_name", otherNames);
 
-    if (choreErr) {
-      console.error("[CreateChores] chore insert error:", choreErr);
-      return;
-    }
+              if (profileLookupErr) {
+                console.error("[CreateChores] profiles lookup error:", profileLookupErr);
+                return;
+              }
 
-    // ---- 4) Insert assignments (required) ----
-    const rows = assignees.map((profile_id) => ({
-      chore_id: newChore.id,
-      profile_id,
-    }));
+              profileRows = foundProfiles ?? [];
+            }
 
-    const { error: assignErr } = await supabase.from("chore_assignments").insert(rows);
+            // Build display_name → UUID map from DB results
+            const nameToId = new Map(profileRows.map((p) => [p.display_name, p.id]));
 
-    if (assignErr) {
-      console.error("[CreateChores] assignment insert error:", assignErr, { rows });
-      return;
-    }
+            // Assemble final UUID array:
+            //   "You"          → currentUser.id  (auth, always available)
+            //   any other name → UUID from profiles table (or skipped if not found)
+            const assignees = rawAssignees
+              .map((n) => (n === "You" ? currentUser.id : nameToId.get(n)))
+              .filter(Boolean); // drop any name that didn't resolve
 
-    // ---- 5) Verify table size changed (after) ----
-    // We check if assignments exist for this chore; and also compare counts when beforeCount was available.
-    const { count: afterCount, error: afterErr } = await supabase
-      .from("chore_assignments")
-      .select("chore_id", { count: "exact", head: true })
-      .in(
-        "chore_id",
-        (
-          await supabase
-            .from("chores")
-            .select("id")
-            .eq("household_id", resolvedHouseholdId)
-        ).data?.map((c) => c.id) ?? []
-      );
+            if (assignees.length === 0) {
+              console.error(
+                "[CreateChores] Assignees array is empty after normalization.",
+                { rawAssignees, profileRows }
+              );
+              return;
+            }
 
-    if (afterErr) {
-      console.warn("[CreateChores] Could not compute afterCount for chore_assignments.", afterErr);
-    }
+            console.log("[CreateChores] resolved assignees:", {
+              rawAssignees,
+              assignees,
+            });
 
-    const { data: verifyRows, error: verifyErr } = await supabase
-      .from("chore_assignments")
-      .select("chore_id, profile_id")
-      .eq("chore_id", newChore.id);
+            // ---- 3) Extract repeat_mask ------------------------------------------
+            //
+            // create-chores.jsx sends `repeatBitmask` — a 7-bit integer where
+            // Mon = MSB (64), Tue = 32, Wed = 16, Thu = 8, Fri = 4, Sat = 2, Sun = 1.
+            // Map it straight to the `repeat_mask` DB column. Default 0 = no repeat.
+            const repeat_mask =
+              typeof payload?.repeatBitmask === "number" ? payload.repeatBitmask : 0;
 
-    if (verifyErr) {
-      console.warn("[CreateChores] Could not verify inserted chore_assignments rows.", verifyErr);
-    }
+            // ---- 4) Snapshot assignment count (before) ---------------------------
+            const { count: beforeCount, error: beforeErr } = await supabase
+              .from("chore_assignments")
+              .select("chore_id", { count: "exact", head: true })
+              .in(
+                "chore_id",
+                (
+                  await supabase
+                    .from("chores")
+                    .select("id")
+                    .eq("household_id", resolvedHouseholdId)
+                ).data?.map((c) => c.id) ?? []
+              );
 
-    const sizeChanged =
-      typeof beforeCount === "number" &&
-      typeof afterCount === "number" &&
-      afterCount > beforeCount;
+            if (beforeErr) {
+              console.warn("[CreateChores] Could not compute beforeCount for chore_assignments.", beforeErr);
+            }
 
-    const hasRowsForChore = Array.isArray(verifyRows) && verifyRows.length > 0;
+            // ---- 5) Insert chore (with repeat_mask) ------------------------------
+            const { data: newChore, error: choreErr } = await supabase
+              .from("chores")
+              .insert({
+                household_id: resolvedHouseholdId,
+                name,
+                description,
+                due_date,
+                status:      "ongoing",
+                repeat_mask,           // ← was missing in the original
+              })
+              .select("id")
+              .single();
 
-    if (sizeChanged || hasRowsForChore) {
-      console.log("chores assignments is updated", {
-        beforeCount,
-        afterCount,
-        insertedForChore: verifyRows?.length ?? null,
-        chore_id: newChore.id,
-      });
-    } else {
-      console.warn("[CreateChores] Expected chore_assignments to change but did not detect it.", {
-        beforeCount,
-        afterCount,
-        verifyRows,
-        chore_id: newChore.id,
-      });
-      // Treat as error condition per your requirement
-      return;
-    }
+            if (choreErr) {
+              console.error("[CreateChores] chore insert error:", choreErr);
+              return;
+            }
 
-    // ---- 6) Close + refresh ----
-    setIsCreateOpen(false);
-    await loadData();
-  } catch (e) {
-    console.error("[CreateChores] onCreate fatal error:", e, { payload });
-  }
-}}
+            // ---- 6) Insert chore_assignments (UUID rows only) --------------------
+            const rows = assignees.map((profile_id) => ({
+              chore_id:   newChore.id,
+              profile_id,            // ← guaranteed UUID, never a display-name string
+            }));
 
+            const { error: assignErr } = await supabase
+              .from("chore_assignments")
+              .insert(rows);
+
+            if (assignErr) {
+              console.error("[CreateChores] assignment insert error:", assignErr, { rows });
+              return;
+            }
+
+            // ---- 7) Verify table size changed (after) ----------------------------
+            const { count: afterCount, error: afterErr } = await supabase
+              .from("chore_assignments")
+              .select("chore_id", { count: "exact", head: true })
+              .in(
+                "chore_id",
+                (
+                  await supabase
+                    .from("chores")
+                    .select("id")
+                    .eq("household_id", resolvedHouseholdId)
+                ).data?.map((c) => c.id) ?? []
+              );
+
+            if (afterErr) {
+              console.warn("[CreateChores] Could not compute afterCount for chore_assignments.", afterErr);
+            }
+
+            const { data: verifyRows, error: verifyErr } = await supabase
+              .from("chore_assignments")
+              .select("chore_id, profile_id")
+              .eq("chore_id", newChore.id);
+
+            if (verifyErr) {
+              console.warn("[CreateChores] Could not verify inserted chore_assignments rows.", verifyErr);
+            }
+
+            const sizeChanged =
+              typeof beforeCount === "number" &&
+              typeof afterCount  === "number" &&
+              afterCount > beforeCount;
+
+            const hasRowsForChore = Array.isArray(verifyRows) && verifyRows.length > 0;
+
+            if (sizeChanged || hasRowsForChore) {
+              console.log("chores assignments is updated", {
+                beforeCount,
+                afterCount,
+                insertedForChore: verifyRows?.length ?? null,
+                chore_id:         newChore.id,
+                repeat_mask,
+              });
+            } else {
+              console.warn("[CreateChores] Expected chore_assignments to change but did not detect it.", {
+                beforeCount,
+                afterCount,
+                verifyRows,
+                chore_id: newChore.id,
+              });
+              return;
+            }
+
+            // ---- 8) Close + refresh ---------------------------------------------
+            setIsCreateOpen(false);
+            await loadData();
+
+          } catch (e) {
+            console.error("[CreateChores] onCreate fatal error:", e, { payload });
+          }
+        }}
       />
     </main>
   );

@@ -157,29 +157,119 @@
 }
 .cc-check input[type="checkbox"] { accent-color: var(--primary); width: 16px; height: 16px; }
 
-/* Repeat */
+/* ═══════════════════════════════════════════════════════════
+   REPEAT SECTION  (matches the screenshot design)
+   ═══════════════════════════════════════════════════════════ */
+
 .cc-repeat {
-  padding: 12px;
-  border-radius: var(--r-md);
+  padding: 14px 12px 10px;
+  border-radius: var(--r-lg);
   border: 1.5px solid var(--green-300);
   background: var(--white);
 }
-.cc-repeat-days { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Row of day pills */
+.cc-repeat-days {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  justify-content: space-between;
+}
+
+/* Individual day pill */
 .cc-day {
-  padding: 6px 12px;
+  flex: 1;
+  min-width: 0;
+  aspect-ratio: 1;
+  max-width: 40px;
+
   border-radius: var(--r-pill);
   border: 1.5px solid var(--green-300);
-  background: var(--primary-light);
-  font-size: 12px; font-weight: 700;
+  background: var(--white);
+
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
   color: var(--primary-dark);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+  user-select: none;
+
+  transition:
+    background  0.18s ease,
+    border-color 0.18s ease,
+    color       0.18s ease,
+    box-shadow  0.18s ease,
+    transform   0.10s ease;
 }
-.cc-day:hover { border-color: var(--primary); }
-.cc-day-on { background: var(--primary); border-color: var(--primary); color: var(--white); }
+
+.cc-day:hover:not(.cc-day-on) {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  transform: translateY(-1px);
+}
+
+/* ACTIVE / toggled state — darker green for clear visual contrast */
+.cc-day-on {
+  background: var(--green-500);
+  border-color: var(--green-600);
+  color: var(--white);
+  box-shadow: 0 2px 6px rgba(61,122,61,.35);
+}
+
+.cc-day-on:hover {
+  background: var(--green-600);
+  border-color: var(--green-600);
+  transform: translateY(-1px);
+}
+
+.cc-day:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Summary + bitmask row */
 .cc-repeat-summary {
-  margin-top: 10px; font-size: 12px; color: var(--muted);
-  display: flex; justify-content: space-between; align-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--green-200);
+  gap: 8px;
 }
-.cc-chevron { font-size: 16px; color: var(--primary); }
+
+.cc-repeat-text {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 600;
+  font-family: var(--font-ui);
+  flex: 1;
+}
+
+/* Bitmask badge — subtle DB value hint */
+.cc-repeat-bitmask {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  background: var(--primary-light);
+  border: 1px solid var(--green-300);
+  border-radius: var(--r-sm);
+  padding: 2px 7px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  cursor: default;
+}
+
+@media (max-width: 380px) {
+  .cc-day { font-size: 10px; max-width: 34px; }
+  .cc-repeat-days { gap: 4px; }
+}
 
 /* Actions */
 .cc-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
