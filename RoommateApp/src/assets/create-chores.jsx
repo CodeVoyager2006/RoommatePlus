@@ -228,9 +228,9 @@ export default function CreateChores({ isOpen, roommates = [], onCreate, onClose
               type="number"
               min="0"
               step="1"
-              value={points}
+              value={points?points:1}
               onChange={(e) => setPoints(e.target.value)}
-              placeholder="e.g. 10"
+              placeholder="Default 1pt"
               aria-label="Points awarded for completing this chore"
             />
             {errors.points && <div className="cc-error">{errors.points}</div>}
