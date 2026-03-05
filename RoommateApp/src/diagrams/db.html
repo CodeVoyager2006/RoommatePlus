@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Database Architecture - Interactive Diagram</title>
+    <link rel="stylesheet" href="./Style/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>🏗️ Complete Project Architecture</h1>
+      <p class="subtitle">Interactive Component & Database Diagram</p>
+
+      <div class="tabs">
+        <div class="tab-button" onclick="window.location.href = 'index.html'">
+          📦 Components
+        </div>
+        <div
+          class="tab-button active"
+          onclick
+          active="window.location.href = 'db.html'"
+        >
+          🗄️ Database
+        </div>
+        <div class="tab-button" onclick="window.location.href = 'flows.html'">
+          🔄 Data Flows
+        </div>
+      </div>
+
+      <!-- DATABASE TAB -->
+      <div id="database-tab" class="tab-content active">
+        <div class="legend">
+          <div class="legend-item">
+            <div class="legend-box legend-database"></div>
+            <span>Database Table</span>
+          </div>
+        </div>
+
+        <div class="diagram-wrapper">
+          <div class="database-grid">
+            <div class="component-db-card database active">
+              <div class="component-name">
+                <span class="component-icon">👤</span>
+                users
+              </div>
+              <div class="component-type">User Accounts</div>
+              <div class="component-description">
+                Stores login credentials and basic account info.
+              </div>
+              <div class="component-db-details" style="display: block">
+                <div class="detail-section">
+                  <div class="detail-label">Fields</div>
+                  <div class="detail-content">
+                    <span class="db-field">id</span> - Unique user ID<br />
+                    <span class="db-field">email</span> - Login email<br />
+                    <span class="db-field">password</span> - Encrypted
+                    password<br />
+                    <span class="db-field">household_id</span> - Which house
+                    they live in
+                  </div>
+                </div>
+                <div class="detail-section">
+                  <div class="detail-label">Used by</div>
+                  <div class="detail-content">
+                    Login system, App.jsx for authentication
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="component-db-card database active">
+              <div class="component-name">
+                <span class="component-icon">🏘️</span>
+                households
+              </div>
+              <div class="component-type">Living Spaces</div>
+              <div class="component-description">
+                Information about each house/apartment.
+              </div>
+              <div class="component-db-details" style="display: block">
+                <div class="detail-section">
+                  <div class="detail-label">Fields</div>
+                  <div class="detail-content">
+                    <span class="db-field">id</span> - Unique household ID<br />
+                    <span class="db-field">name</span> - House nickname<br />
+                    <span class="db-field">invite_code</span> - Code to join
+                    household
+                  </div>
+                </div>
+                <div class="detail-section">
+                  <div class="detail-label">Used by</div>
+                  <div class="detail-content">
+                    All pages - filters data by household
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="component-db-card database active">
+              <div class="component-name">
+                <span class="component-icon">📋</span>
+                profiles
+              </div>
+              <div class="component-type">User Profiles</div>
+              <div class="component-description">
+                Extended info about each user (display name, points, etc).
+              </div>
+              <div class="component-db-details" style="display: block">
+                <div class="detail-section">
+                  <div class="detail-label">Fields</div>
+                  <div class="detail-content">
+                    <span class="db-field">id</span> - Unique profile ID<br />
+                    <span class="db-field">display_name</span> - Name shown in
+                    app<br />
+                    <span class="db-field">points</span> - Reward points
+                    earned<br />
+                    <span class="db-field">streaks</span> - Days in a row with
+                    completed chores<br />
+                    <span class="db-field">household_id</span> - Links to
+                    household
+                  </div>
+                </div>
+                <div class="detail-section">
+                  <div class="detail-label">Used by</div>
+                  <div class="detail-content">
+                    Header (shows points/streaks), Chat.jsx (member names)
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="component-db-card database active">
+              <div class="component-name">
+                <span class="component-icon">✅</span>
+                chores
+              </div>
+              <div class="component-type">Chore Tasks</div>
+              <div class="component-description">
+                All the household chores and their details.
+              </div>
+              <div class="component-db-details" style="display: block">
+                <div class="detail-section">
+                  <div class="detail-label">Fields</div>
+                  <div class="detail-content">
+                    <span class="db-field">id</span> - Unique chore ID<br />
+                    <span class="db-field">household_id</span> - Which house<br />
+                    <span class="db-field">name</span> - Chore title<br />
+                    <span class="db-field">description</span> - More details<br />
+                    <span class="db-field">status</span> - Not started / In
+                    progress / Done<br />
+                    <span class="db-field">repeat_week</span> - Repeats
+                    weekly?<br />
+                    <span class="db-field">due_date</span> - When it's due
+                  </div>
+                </div>
+                <div class="detail-section">
+                  <div class="detail-label">Used by</div>
+                  <div class="detail-content">
+                    Chores.jsx - main data source for chore list
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="component-db-card database active">
+              <div class="component-name">
+                <span class="component-icon">👥</span>
+                chore_assignments
+              </div>
+              <div class="component-type">Task Assignments</div>
+              <div class="component-description">
+                Links chores to the people assigned to do them.
+              </div>
+              <div class="component-db-details" style="display: block">
+                <div class="detail-section">
+                  <div class="detail-label">Fields</div>
+                  <div class="detail-content">
+                    <span class="db-field">chore_id</span> - Which chore<br />
+                    <span class="db-field">profile_id</span> - Who's assigned
+                  </div>
+                </div>
+                <div class="detail-section">
+                  <div class="detail-label">Relationship</div>
+                  <div class="detail-content">
+                    Many-to-many: One chore can have multiple people, one person
+                    can have multiple chores
+                  </div>
+                </div>
+                <div class="detail-section">
+                  <div class="detail-label">Used by</div>
+                  <div class="detail-content">
+                    Chores.jsx - determines who sees which chores
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="component-db-card database active">
+              <div class="component-name">
+                <span class="component-icon">🧼</span>
+                machines
+              </div>
+              <div class="component-type">Laundry Machines</div>
+              <div class="component-description">
+                Washing/drying machines and their current status.
+              </div>
+              <div class="component-db-details" style="display: block">
+                <div class="detail-section">
+                  <div class="detail-label">Fields</div>
+                  <div class="detail-content">
+                    <span class="db-field">id</span> - Unique machine ID<br />
+                    <span class="db-field">household_id</span> - Which house<br />
+                    <span class="db-field">name</span> - Machine name/number<br />
+                    <span class="db-field">occupied_by</span> - User ID if in
+                    use<br />
+                    <span class="db-field">image_url</span> - Photo of machine
+                  </div>
+                </div>
+                <div class="detail-section">
+                  <div class="detail-label">Status logic</div>
+                  <div class="detail-content">
+                    If occupied_by is null → available<br />
+                    If occupied_by has user ID → busy
+                  </div>
+                </div>
+                <div class="detail-section">
+                  <div class="detail-label">Used by</div>
+                  <div class="detail-content">
+                    Machine.jsx - shows availability and allows occupy/free
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="component-db-card database active">
+              <div class="component-name">
+                <span class="component-icon">💭</span>
+                threads
+              </div>
+              <div class="component-type">Chat Threads</div>
+              <div class="component-description">
+                Conversation topics in the group chat.
+              </div>
+              <div class="component-db-details" style="display: block">
+                <div class="detail-section">
+                  <div class="detail-label">Fields</div>
+                  <div class="detail-content">
+                    <span class="db-field">id</span> - Unique thread ID<br />
+                    <span class="db-field">household_id</span> - Which house<br />
+                    <span class="db-field">chore_id</span> - Related chore
+                    (optional)<br />
+                    <span class="db-field">title</span> - Thread subject<br />
+                    <span class="db-field">summary</span> - AI-generated
+                    overview
+                  </div>
+                </div>
+                <div class="detail-section">
+                  <div class="detail-label">Special feature</div>
+                  <div class="detail-content">
+                    Can optionally link to a chore for chore-specific
+                    discussions
+                  </div>
+                </div>
+                <div class="detail-section">
+                  <div class="detail-label">Used by</div>
+                  <div class="detail-content">
+                    Chat.jsx - displays all conversation threads
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="component-db-card database active">
+              <div class="component-name">
+                <span class="component-icon">✉️</span>
+                messages
+              </div>
+              <div class="component-type">Chat Messages</div>
+              <div class="component-description">
+                Individual messages within each thread.
+              </div>
+              <div class="component-db-details" style="display: block">
+                <div class="detail-section">
+                  <div class="detail-label">Fields</div>
+                  <div class="detail-content">
+                    <span class="db-field">id</span> - Unique message ID<br />
+                    <span class="db-field">thread_id</span> - Which
+                    conversation<br />
+                    <span class="db-field">sender_id</span> - Who sent it<br />
+                    <span class="db-field">content</span> - The message text<br />
+                    <span class="db-field">created_at</span> - When it was sent
+                  </div>
+                </div>
+                <div class="detail-section">
+                  <div class="detail-label">Used by</div>
+                  <div class="detail-content">
+                    Chat.jsx - displays messages in ThreadView component
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="click-hint">
+          📊 All database tables are linked by household_id to separate
+          different homes
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

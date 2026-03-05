@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Complete Project Architecture - Interactive Diagram</title>
+    <link rel="stylesheet" href="./Style/style.css" />
+  </head>
+  <body>
+    <div class="container">
+        <h1>🏗️ Complete Project Architecture</h1>
+        <p class="subtitle">Interactive Component & Database Diagram</p>
+
+        <div class="tabs">
+          <div class="tab-button" onclick="window.location.href = 'index.html'">📦 Components</div>
+          <div class="tab-button" onclick="window.location.href = 'db.html'">🗄️ Database</div>
+          <div class="tab-button" onclick="window.location.href = 'flows.html'">🔄 Data Flows</div>
+       </div>
+
+        <!-- COMPONENTS TAB -->
+        <div id="components-tab" class="tab-content active">
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-box legend-entry"></div>
+                    <span>Entry Point</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box legend-parent"></div>
+                    <span>Parent Component</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box legend-page"></div>
+                    <span>Page Component</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box legend-component"></div>
+                    <span>Sub-Component</span>
+                </div>
+            </div>
+
+            <div class="diagram-wrapper">
+                <div class="architecture-diagram">
+                    <!-- Layer 1: Entry Point -->
+                    <div class="layer">
+                        <div class="component-card entry" data-component="main">
+                            <div class="component-name">
+                                <span class="component-icon">🚀</span>
+                                main.jsx
+                            </div>
+                            <div class="component-type">Entry Point</div>
+                            <div class="component-description">
+                                The app's starting point. Launches React and renders the entire application.
+                            </div>
+                            <div class="component-details">
+                                <div class="detail-section">
+                                    <div class="detail-label">Purpose</div>
+                                    <div class="detail-content">Bootstraps React 18 and mounts App component to the DOM</div>
+                                </div>
+                                <div class="detail-section">
+                                    <div class="detail-label">What it does</div>
+                                    <div class="detail-content">
+                                        • Uses createRoot() to start the app<br>
+                                        • Wraps everything in StrictMode<br>
+                                        • Renders to element with id="root"
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Layer 2: Parent App Component -->
+                    <div class="layer">
+                        <div class="component-card parent" data-component="app">
+                            <div class="component-name">
+                                <span class="component-icon">🏠</span>
+                                App.jsx
+                            </div>
+                            <div class="component-type">Parent Component / Router</div>
+                            <div class="component-description">
+                                The main control center. Decides which page to show and manages navigation.
+                            </div>
+                            <div class="component-details">
+                                <div class="detail-section">
+                                    <div class="detail-label">State</div>
+                                    <div class="detail-content">
+                                        <span class="state-badge">route</span> - Current page ("chores", "chat", "machine", "settings")
+                                    </div>
+                                </div>
+                                <div class="detail-section">
+                                    <div class="detail-label">What it renders</div>
+                                    <ul class="detail-list">
+                                        <li>Header - Shows user name, points (1800), score (900), streak (10)</li>
+                                        <li>Current page based on route state</li>
+                                        <li>MenuBar - Bottom navigation with 4 buttons</li>
+                                    </ul>
+                                </div>
+                                <div class="detail-section">
+                                    <div class="detail-label">How navigation works</div>
+                                    <div class="detail-content">
+                                        MenuBar buttons call setRoute() → route state updates → different page renders
+                                    </div>
+                                </div>
+                                <div class="detail-section">
+                                    <div class="detail-label">Database connection (future)</div>
+                                    <div class="detail-content">
+                                        Will get user data from <span class="db-field">users</span> and <span class="db-field">profiles</span> tables
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Layer 3: Page Components -->
+                    <div class="layer">
+                        <div class="component-card page" data-component="chores">
+                            <div class="component-name">
+                                <span class="component-icon">🧹</span>
+                                Chores.jsx
+                            </div>
+                            <div class="component-type">Page Component</div>
+                            <div class="component-description">
+                                Manage household chores. Create tasks, assign people, mark as done.
+                            </div>
+                            <div class="component-details">
+                                <div class="detail-section">
+                                    <div class="detail-label">State</div>
+                                    <div class="detail-content">
+                                        <span class="state-badge">roommates</span> - Array of people and their chores<br>
+                                        <span class="state-badge">selectedChore</span> - Currently viewing<br>
+                                        <span class="state-badge">isCreateOpen</span> - Create modal visible?
+                                    </div>
+                                </div>
+                                <div class="detail-section">
+                                    <div class="detail-label">Key actions</div>
+                                    <ul class="detail-list">
+                                        <li>createChore() - Validates and adds new chore</li>
+                                        <li>deleteChore() - Removes chore from all roommates</li>
+                                        <li>handleBlockClick() - Opens detail popup</li>
+                                    </ul>
+                                </div>
+                                <div class="detail-section">
+                                    <div class="detail-label">Database tables used</div>
+                                    <div class="detail-content">
+                                        <span class="db-field">chores</span> - Stores chore details<br>
+                                        <span class="db-field">chore_assignments</span> - Links chores to people<br>
+                                        <span class="db-field">households</span> - Gets household_id
+                                    </div>
+                                </div>
+                                <div class="detail-section">
+                                    <div class="detail-label">Child components</div>
+                                    <div class="detail-content">ChoresWidget, ChoresPopup, CreateChores</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="component-card page" data-component="chat">
+                            <div class="component-name">
+                                <span class="component-icon">💬</span>
+                                Chat.jsx
+                            </div>
+                            <div class="component-type">Page Component</div>
+                            <div class="component-description">
+                                Group messaging with threads. Talk with roommates about house stuff.
+                            </div>
+                            <div class="component-details">
+                                <div class="detail-section">
+                                    <div class="detail-label">State</div>
+                                    <div class="detail-content">
+                                        <span class="state-badge">members</span> - Roommate list<br>
+                                        <span class="state-badge">threads</span> - All conversations<br>
+                                        <span class="state-badge">view</span> - "threads" | "members" | "thread"<br>
+                                        <span class="state-badge">selectedId</span> - Current thread<br>
+                                        <span class="state-badge">composerText</span> - New message input
+                                    </div>
+                                </div>
+                                <div class="detail-section">
+                                    <div class="detail-label">Key actions</div>
+                                    <ul class="detail-list">
+                                        <li>createThread() - Starts new conversation</li>
+                                        <li>postMessage() - Adds message to thread</li>
+                                        <li>openThread() - Shows thread details</li>
+                                        <li>formatTime() - Formats timestamps</li>
+                                    </ul>
+                                </div>
+                                <div class="detail-section">
+                                    <div class="detail-label">Database tables used</div>
+                                    <div class="detail-content">
+                                        <span class="db-field">threads</span> - Conversation topics<br>
+                                        <span class="db-field">messages</span> - Individual messages<br>
+                                        <span class="db-field">profiles</span> - Member info
+                                    </div>
+                                </div>
+                                <div class="detail-section">
+                                    <div class="detail-label">Special feature</div>
+                                    <div class="detail-content">
+                                        AI Summary: Automatically creates summary from first 90 characters of message
+                                    </div>
+                                </div>
+                                <div class="detail-section">
+                                    <div class="detail-label">Child components</div>
+                                    <div class="detail-content">MembersBanner, ThreadCard, MembersList, ThreadView, NewThreadModal</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="component-card page" data-component="machine">
+                            <div class="component-name">
+                                <span class="component-icon">🧺</span>
+                                Machine.jsx
+                            </div>
+                            <div class="component-type">Page Component</div>
+                            <div class="component-description">
+                                Track washing machine availability. Claim when using, free when done.
+                            </div>
+                            <div class="component-details">
+                                <div class="detail-section">
+                                    <div class="detail-label">State</div>
+                                    <div class="detail-content">
+                                        <span class="state-badge">machines</span> - All machines<br>
+                                        <span class="state-badge">selectedId</span> - Current machine<br>
+                                        <span class="state-badge">isAddOpen</span> - Add modal visible?<br>
+                                        <span class="state-badge">toast</span> - Notification message
+                                    </div>
+                                </div>
+                                <div class="detail-section">
+                                    <div class="detail-label">Key actions</div>
+                                    <ul class="detail-list">
+                                        <li>requestOccupy() - Claim machine if available</li>
+                                        <li>requestFinish() - Free machine (only if you're using it)</li>
+                                        <li>addMachine() - Add new machine</li>
+                                        <li>openToast() - Show notification (auto-hides after 2.4s)</li>
+                                    </ul>
+                                </div>
+                                <div class="detail-section">
+                                    <div class="detail-label">Business rules</div>
+                                    <div class="detail-content">
+                                        ✓ Can only occupy if status = "available"<br>
+                                        ✓ Can only finish if you're the occupier<br>
+                                        ✓ Shows error toast if rules violated
+                                    </div>
+                                </div>
+                                <div class="detail-section">
+                                    <div class="detail-label">Database tables used</div>
+                                    <div class="detail-content">
+                                        <span class="db-field">machines</span> - Machine status and details<br>
+                                        <span class="db-field">households</span> - Links to household
+                                    </div>
+                                </div>
+                                <div class="detail-section">
+                                    <div class="detail-label">Child components</div>
+                                    <div class="detail-content">MachineWidget, MachineInfo, AddMachine</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="component-card page" data-component="setting">
+                            <div class="component-name">
+                                <span class="component-icon">⚙️</span>
+                                Setting.jsx
+                            </div>
+                            <div class="component-type">Page Component</div>
+                            <div class="component-description">
+                                Settings page (placeholder). Will have profile editing and preferences.
+                            </div>
+                            <div class="component-details">
+                                <div class="detail-section">
+                                    <div class="detail-label">Current state</div>
+                                    <div class="detail-content">
+                                        Just shows basic text. No functionality yet.
+                                    </div>
+                                </div>
+                                <div class="detail-section">
+                                    <div class="detail-label">Future features</div>
+                                    <ul class="detail-list">
+                                        <li>Edit display name and profile picture</li>
+                                        <li>Change notification preferences</li>
+                                        <li>Manage household settings</li>
+                                        <li>View points and streaks history</li>
+                                    </ul>
+                                </div>
+                                <div class="detail-section">
+                                    <div class="detail-label">Database tables (future)</div>
+                                    <div class="detail-content">
+                                        <span class="db-field">users</span> - Account settings<br>
+                                        <span class="db-field">profiles</span> - Display preferences
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Layer 4: Sub-components -->
+                    <div class="layer">
+                        <div class="component-card subcomponent">
+                            <div class="component-name">
+                                <span class="component-icon">🧩</span>
+                                Sub-Components
+                            </div>
+                            <div class="component-type">Reusable UI Pieces</div>
+                            <div class="component-description">
+                                Smaller components used by the pages above.
+                            </div>
+                            <div class="component-details">
+                                <div class="detail-section">
+                                    <div class="detail-label">Shared components</div>
+                                    <ul class="detail-list">
+                                        <li><strong>Header</strong> - Top bar with user info</li>
+                                        <li><strong>MenuBar</strong> - Bottom navigation (4 buttons)</li>
+                                    </ul>
+                                </div>
+                                <div class="detail-section">
+                                    <div class="detail-label">Chores components</div>
+                                    <ul class="detail-list">
+                                        <li>ChoresWidget - Shows chores for one person</li>
+                                        <li>ChoresPopup - Detail modal (view/delete chore)</li>
+                                        <li>CreateChores - Form to make new chore</li>
+                                    </ul>
+                                </div>
+                                <div class="detail-section">
+                                    <div class="detail-label">Chat components</div>
+                                    <ul class="detail-list">
+                                        <li>MembersBanner - Shows member avatars</li>
+                                        <li>ThreadCard - Preview of one conversation</li>
+                                        <li>MembersList - Full member list view</li>
+                                        <li>ThreadView - Full thread with all messages</li>
+                                        <li>NewThreadModal - Create new conversation</li>
+                                    </ul>
+                                </div>
+                                <div class="detail-section">
+                                    <div class="detail-label">Machine components</div>
+                                    <ul class="detail-list">
+                                        <li>MachineWidget - One machine card</li>
+                                        <li>MachineInfo - Machine detail modal</li>
+                                        <li>AddMachine - Add new machine form</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="click-hint">
+                💡 Click on any component to see detailed information 
+            </div>
+            <div class="click-hint">
+                🔍 Click "Show All Details" to expand all components at once
+                <button id="show-all-btn"><u>Show All Details</u></button>  
+            </div>
+        <script src="script.js"></script>
+  </body>
+</html>
