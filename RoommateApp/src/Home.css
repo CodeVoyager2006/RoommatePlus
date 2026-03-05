@@ -341,3 +341,26 @@
   .onboarding-wordmark { font-size: 1.9rem; }
   .onboarding-code     { font-size: 1.6rem; letter-spacing: 0.16em; }
 }
+
+/* ── Remember-me row (LogIn) ────────────────────────────────── */
+.onboarding-remember {
+  margin-bottom: 20px;
+}
+
+.onboarding-check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-body, 'Nunito', sans-serif);
+  font-size: 0.85rem;
+  color: var(--muted, #6b8f6b);
+  cursor: pointer;
+  user-select: none;
+}
+
+.onboarding-check-label input[type="checkbox"] {
+  accent-color: var(--primary, #6fa86f);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
