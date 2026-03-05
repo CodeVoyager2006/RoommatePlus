@@ -8,7 +8,7 @@
 
 .tv-topbar {
   display: grid;
-  grid-template-columns: 44px 1fr;
+  grid-template-columns: 44px 1fr auto;
   gap: 10px; align-items: center;
   padding: 10px 0 10px;
 }
@@ -29,6 +29,67 @@
   font-size: 18px; font-weight: 900;
   color: var(--green-900);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Info toggle button */
+.tv-info-btn {
+  width: 36px; height: 36px;
+  border-radius: var(--r-pill);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--primary-dark);
+  font-size: 16px; font-weight: 900;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.tv-info-btn:hover { background: var(--primary-light); border-color: var(--green-300); }
+.tv-info-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* Thread info panel (Frame 3) */
+.tv-info-panel {
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  padding: 14px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: var(--shadow-sm);
+}
+
+.tv-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+.tv-info-label {
+  font-weight: 700;
+  font-family: var(--font-ui);
+  color: var(--green-900);
+}
+.tv-info-value {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.tv-info-summary {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tv-info-summary-label {
+  font-family: var(--font-ui);
+  font-size: 13px; font-weight: 900;
+  color: var(--green-900);
+}
+.tv-info-summary-text {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.4;
 }
 
 .tv-body { margin-top: 10px; display: flex; flex-direction: column; gap: 12px; }
@@ -54,7 +115,7 @@
   left: 50%; transform: translateX(-50%);
   bottom: calc(var(--app-bottomnav-height) + 12px);
   width: min(600px, calc(100% - 28px));
-  display: grid; grid-template-columns: 1fr auto; gap: 10px;
+  display: grid; grid-template-columns: 1fr auto auto; gap: 8px;
   background: var(--surface-2);
   border: 1.5px solid var(--border);
   border-radius: var(--r-lg);
@@ -76,6 +137,20 @@
 .tv-composer__input:focus { border-color: var(--primary); }
 .tv-composer__input::placeholder { color: var(--muted); }
 
+/* Camera / attachment icon button */
+.tv-composer__icon-btn {
+  width: 40px; height: 40px;
+  border-radius: var(--r-md);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+  align-self: center;
+}
+
 .tv-composer__btn {
   background: var(--primary);
   border: none;
@@ -84,6 +159,7 @@
   font-size: 13px; font-weight: 800;
   color: var(--white);
   font-family: var(--font-ui);
+  align-self: center;
 }
 .tv-composer__btn:hover:not(:disabled) { background: var(--primary-hover); }
 .tv-composer__btn:disabled {
@@ -103,3 +179,72 @@
 .tv-back:focus-visible,
 .tv-composer__btn:focus-visible,
 .tv-composer__input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* Own-message alignment */
+.tv-msg--own .tv-msg__bubble {
+  background: var(--primary-light);
+  border-color: var(--green-300);
+}
+.tv-msg--own .tv-msg__meta {
+  flex-direction: row-reverse;
+}
+
+/* ── Info detail page variant ─────────────────────────────────────────────── */
+
+/* When the info panel is a full page (not a collapsible overlay), remove the
+   bottom margin so it flows directly into the Relevant Files section. */
+.tv-info-panel--page {
+  margin-bottom: 0;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  border-bottom: none;
+}
+
+/* ── Relevant Files section ───────────────────────────────────────────────── */
+
+.tv-files-section {
+  border: 1.5px solid var(--border);
+  border-top: none;
+  background: var(--surface);
+  border-radius: 0 0 var(--r-lg) var(--r-lg);
+  overflow: hidden;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.tv-files-header {
+  font-family: var(--font-ui);
+  font-size: 13px; font-weight: 900;
+  color: var(--green-900);
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--primary-light);
+}
+
+.tv-files-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 32px 20px;
+  text-align: center;
+}
+
+.tv-files-empty__icon {
+  font-size: 32px;
+  opacity: 0.35;
+}
+
+.tv-files-empty__text {
+  font-family: var(--font-ui);
+  font-size: 14px; font-weight: 700;
+  color: var(--muted);
+}
+
+.tv-files-empty__sub {
+  font-size: 12px;
+  color: var(--muted);
+  opacity: 0.8;
+  max-width: 220px;
+  line-height: 1.4;
+}

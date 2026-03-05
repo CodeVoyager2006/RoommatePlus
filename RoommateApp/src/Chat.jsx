@@ -1,170 +1,105 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import MembersBanner from "./assets/MembersBanner";
 import ThreadCard from "./assets/ThreadCard";
 import MembersList from "./assets/MembersList";
 import ThreadView from "./assets/ThreadView";
 import NewThreadModal from "./assets/NewThreadModal";
+import { useChat } from "./useChat";
 import "./Chat.css";
-
-const CURRENT_USER = "You";
-
-const seedMembers = [
-  { id: "u1", name: "Alex"},
-  { id: "u2", name: "Sam"},
-  { id: "u3", name: "Jamie"},
-  { id: "u4", name: "Taylor"},
-];
-
-const seedThreads = [
-  {
-    id: "t1",
-    title: "Kitchen cleanup",
-    summary: "AI Summary: Reminder to reset counters, take out trash, and run dishwasher tonight.",
-    author: "Alex",
-    createdAt: Date.now() - 1000 * 60 * 60 * 4,
-    messages: [
-      {
-        id: "m1",
-        author: "Alex",
-        text: "Can we all do a quick kitchen reset tonight?",
-        createdAt: Date.now() - 1000 * 60 * 60 * 4,
-      },
-      {
-        id: "m2",
-        author: "Jamie",
-        text: "I can do counters + wipe the stove.",
-        createdAt: Date.now() - 1000 * 60 * 60 * 3.5,
-      },
-    ],
-  },
-  {
-    id: "t2",
-    title: "Laundry schedule",
-    summary: "AI Summary: Suggestion to add a simple washer/dryer rotation so nobody blocks machines.",
-    author: "Sam",
-    createdAt: Date.now() - 1000 * 60 * 60 * 24,
-    messages: [
-      {
-        id: "m3",
-        author: "Sam",
-        text: "Can we agree on a laundry rotation?",
-        createdAt: Date.now() - 1000 * 60 * 60 * 24,
-      },
-    ],
-  },
-];
 
 function formatTime(ts) {
   const d = new Date(ts);
-  return d.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  return d.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
-function makeSummaryFromBody(body) {
-  const cleaned = body.trim().replace(/\s+/g, " ");
-  const short = cleaned.length > 90 ? `${cleaned.slice(0, 90)}…` : cleaned;
-  return `AI Summary: ${short || "No summary available."}`;
-}
-
-export default function Chat() {
-  const [members] = useState(seedMembers);
-  const [threads, setThreads] = useState(seedThreads);
-
-  // "threads" | "members" | "thread"
-  const [view, setView] = useState("threads");
-  const [selectedId, setSelectedId] = useState(null);
-
-  const selectedThread = useMemo(
-    () => threads.find((t) => t.id === selectedId) || null,
-    [threads, selectedId]
-  );
+/**
+ * Chat
+ *
+ * Props (all provided by AppLayout in App.jsx — no fetch needed here):
+ *   householdId   {string}  UUID — current user's household
+ *   currentUserId {string}  UUID — authenticated user (profiles.id / auth.users.id)
+ *   houseName     {string}  Already-loaded household name
+ *   initialMembers {Array}  Already-loaded member list
+ */
+export default function Chat({ householdId, currentUserId, houseName, initialMembers }) {
+  const {
+    household,
+    members,
+    threads,
+    messages,
+    selectedThread,
+    view,
+    loadingThreads,
+    loadingMessages,
+    error,
+    openThread,
+    openMembers,
+    goBackToThreads,
+    handleCreateThread,
+    handlePostMessage,
+  } = useChat(householdId, currentUserId, houseName, initialMembers);
 
   const [composerText, setComposerText] = useState("");
-  const [isNewOpen, setIsNewOpen] = useState(false);
-  const [newPrefillBody, setNewPrefillBody] = useState("");
-
-  const openMembers = () => setView("members");
-
-  const openThread = (id) => {
-    setSelectedId(id);
-    setView("thread");
-  };
-
-  const goBackToThreads = () => {
-    setView("threads");
-    setSelectedId(null);
-  };
+  const [isNewOpen, setIsNewOpen]       = useState(false);
+  const [prefillBody, setPrefillBody]   = useState("");
 
   const openNewThread = () => {
-    const body = composerText.trim();
-    setNewPrefillBody(body);
+    setPrefillBody(composerText.trim());
     setIsNewOpen(true);
   };
 
-  const createThread = ({ title, body }) => {
-    const now = Date.now();
-    const newThread = {
-      id: `t_${now}_${Math.random().toString(16).slice(2)}`,
-      title: title.trim() || "Untitled",
-      summary: makeSummaryFromBody(body),
-      author: CURRENT_USER,
-      createdAt: now,
-      messages: body.trim()
-        ? [
-            {
-              id: `m_${now}_0`,
-              author: CURRENT_USER,
-              text: body.trim(),
-              createdAt: now,
-            },
-          ]
-        : [],
-    };
-
-    setThreads((prev) => [newThread, ...prev]);
+  const onCreate = async ({ title, body }) => {
+    await handleCreateThread({ title, body });
     setComposerText("");
     setIsNewOpen(false);
-    setNewPrefillBody("");
+    setPrefillBody("");
   };
 
-  const postMessage = (threadId, text) => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-
-    const now = Date.now();
-    setThreads((prev) =>
-      prev.map((t) => {
-        if (t.id !== threadId) return t;
-        const msg = {
-          id: `m_${now}_${Math.random().toString(16).slice(2)}`,
-          author: CURRENT_USER,
-          text: trimmed,
-          createdAt: now,
-        };
-        return { ...t, messages: [...t.messages, msg] };
-      })
-    );
-  };
+  // household/members are pre-loaded from App — no blocking loading state.
+  // Only surface errors if something actually went wrong.
+  if (error) {
+    return <div className="chat-page chat-error">Error: {error}</div>;
+  }
 
   return (
     <div className="chat-page">
       {view === "threads" && (
         <>
-          <MembersBanner members={members} onClick={openMembers} />
+          <MembersBanner
+            members={members}
+            houseName={household?.name ?? houseName ?? ""}
+            onClick={openMembers}
+          />
 
           <div className="chat-thread-list">
+            {loadingThreads && threads.length === 0 && (
+              <p className="chat-empty">Loading threads…</p>
+            )}
+            {!loadingThreads && threads.length === 0 && (
+              <p className="chat-empty">No discussions yet. Start one below!</p>
+            )}
             {threads.map((t) => (
               <ThreadCard
                 key={t.id}
                 title={t.title}
-                summary={t.summary}
-                author={t.author}
-                timeLabel={formatTime(t.createdAt)}
+                summary={t.summary ?? ""}
+                author={t.authorName ?? ""}
+                timeLabel={formatTime(new Date(t.created_at).getTime())}
                 onClick={() => openThread(t.id)}
               />
             ))}
           </div>
 
-          <div className="chat-composer" role="region" aria-label="Create a new discussion thread">
+          <div
+            className="chat-composer"
+            role="region"
+            aria-label="Create a new discussion thread"
+          >
             <input
               className="chat-composer__input"
               placeholder="Your message..."
@@ -185,23 +120,32 @@ export default function Chat() {
             open={isNewOpen}
             onClose={() => {
               setIsNewOpen(false);
-              setNewPrefillBody("");
+              setPrefillBody("");
             }}
-            onCreate={createThread}
-            prefillBody={newPrefillBody}
+            onCreate={onCreate}
+            prefillBody={prefillBody}
           />
         </>
       )}
 
       {view === "members" && (
-        <MembersList members={members} onBack={goBackToThreads} />
+        <MembersList
+          members={members}
+          houseName={household?.name ?? houseName ?? ""}
+          onBack={goBackToThreads}
+        />
       )}
 
       {view === "thread" && (
         <ThreadView
           thread={selectedThread}
+          messages={messages}
+          loadingMessages={loadingMessages}
+          currentUserId={currentUserId}
           onBack={goBackToThreads}
-          onSend={(text) => selectedThread && postMessage(selectedThread.id, text)}
+          onSend={(text) =>
+            selectedThread && handlePostMessage(selectedThread.id, text)
+          }
           formatTime={formatTime}
         />
       )}

@@ -26,6 +26,32 @@
   color: var(--green-900);
 }
 
+/* House banner */
+.ml-house-banner {
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  padding: 14px 16px;
+  display: flex; gap: 14px; align-items: center;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow-sm);
+}
+
+.ml-house-img {
+  width: 56px; height: 56px;
+  border-radius: var(--r-md);
+  background: var(--primary-light);
+  border: 1.5px solid var(--green-300);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; flex-shrink: 0;
+}
+
+.ml-house-name {
+  font-family: var(--font-ui);
+  font-size: 17px; font-weight: 900;
+  color: var(--green-900);
+}
+
 .ml-list { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
 
 .ml-row {
@@ -40,3 +66,4 @@
 
 .ml-meta { display: flex; flex-direction: column; gap: 4px; }
 .ml-name { font-family: var(--font-ui); font-size: 14px; font-weight: 800; color: var(--text); }
+.ml-stats { font-size: 12px; color: var(--muted); }

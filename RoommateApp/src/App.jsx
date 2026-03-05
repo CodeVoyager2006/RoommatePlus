@@ -17,15 +17,27 @@ import Chat from "./Chat";
 import Machine from "./Machine";
 import Setting from "./Setting";
 
+// Valid tab ids — must match MenuBar's tab keys
+const TABS = ["chores", "chat", "machine", "setting"];
+
+function getInitialTab() {
+  // Read tab from the URL hash, e.g. /app#chat → "chat"
+  const hash = window.location.hash.replace("#", "");
+  return TABS.includes(hash) ? hash : "chores";
+}
+
 /* =========================
    AUTHENTICATED APP LAYOUT
    ========================= */
-function AppLayout({ profile, refreshProfile }) {
-  // Manage the active tab in state instead of via React Router.
-  // All tab components are always mounted — only their visibility changes.
-  // This prevents React Router from unmounting/remounting them on every
-  // tab switch, which would re-trigger loadData() each time.
-  const [activeTab, setActiveTab] = useState("chores");
+function AppLayout({ profile, members, refreshProfile }) {
+  const [activeTab, setActiveTab] = useState(getInitialTab);
+
+  // Keep the URL hash in sync with the active tab so the address bar
+  // reflects the current section (e.g. /app#chat) without triggering
+  // a full navigation / remount.
+  useEffect(() => {
+    window.history.replaceState(null, "", `#${activeTab}`);
+  }, [activeTab]);
 
   return (
     <>
@@ -35,14 +47,11 @@ function AppLayout({ profile, refreshProfile }) {
         streaks={profile.streaks}
       />
 
-      {/* MenuBar receives the active tab + a setter instead of using navigate() */}
       <MenuBar activeTab={activeTab} onTabChange={setActiveTab} />
 
       {/*
-        All tabs are rendered simultaneously but hidden when inactive.
-        Using visibility:hidden + height:0 + overflow:hidden (rather than
-        display:none) keeps the components fully mounted while preventing
-        layout interference from hidden tabs.
+        All tabs stay mounted; only visibility toggles.
+        This prevents every tab from re-fetching data on every switch.
       */}
       <div
         style={activeTab === "chores"
@@ -57,7 +66,17 @@ function AppLayout({ profile, refreshProfile }) {
           ? undefined
           : { visibility: "hidden", height: 0, overflow: "hidden" }}
       >
-        <Chat />
+        {/*
+          Pass the data already loaded in App so Chat never needs to
+          re-fetch the household or members from scratch.
+          currentUserId comes from profile.id (profiles.id = auth.users.id).
+        */}
+        <Chat
+          householdId={profile.household_id}
+          currentUserId={profile.id}
+          houseName={profile.household_name}
+          initialMembers={members}
+        />
       </div>
 
       <div
@@ -87,7 +106,8 @@ export default function App() {
   const [profileLoading, setProfileLoading] = useState(true);
 
   const [session, setSession] = useState(null);
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState(null);   // includes household_name
+  const [members, setMembers] = useState([]);      // pre-fetched for Chat
 
   /* =========================
      SUPABASE AUTH CONNECTION
@@ -116,27 +136,53 @@ export default function App() {
   }, []);
 
   /* =========================
-     LOAD PROFILE
+     LOAD PROFILE + HOUSEHOLD NAME + MEMBERS
      ========================= */
   const loadProfile = useCallback(async (userId) => {
     if (!userId) {
       setProfile(null);
+      setMembers([]);
       setProfileLoading(false);
       return;
     }
 
     setProfileLoading(true);
 
+    // Fetch profile joined with household name in one query
     const { data, error } = await supabase
       .from("profiles")
-      .select("display_name, points, streaks, household_id")
+      .select(`
+        id,
+        display_name,
+        points,
+        streaks,
+        household_id,
+        households ( name )
+      `)
       .eq("id", userId)
       .single();
 
     if (!error && data) {
-      setProfile(data);
+      const enriched = {
+        ...data,
+        household_name: data.households?.name ?? "",
+      };
+      setProfile(enriched);
+
+      // Pre-fetch all members for the household so Chat can render immediately
+      if (data.household_id) {
+        const { data: mems } = await supabase
+          .from("profiles")
+          .select("id, display_name, points, streaks")
+          .eq("household_id", data.household_id)
+          .order("points", { ascending: false });
+        setMembers(mems ?? []);
+      } else {
+        setMembers([]);
+      }
     } else {
       setProfile(null);
+      setMembers([]);
     }
 
     setProfileLoading(false);
@@ -146,8 +192,6 @@ export default function App() {
     loadProfile(session?.user?.id ?? null);
   }, [session, loadProfile]);
 
-  // Passed to HouseCreate / HouseLogin so they can trigger a profile refresh
-  // immediately after the household_id is written — no page reload needed.
   const refreshProfile = useCallback(() => {
     if (session?.user?.id) loadProfile(session.user.id);
   }, [session, loadProfile]);
@@ -164,49 +208,28 @@ export default function App() {
       <Route
         path="/"
         element={
-          !isAuthed ? (
-            <Home />
-          ) : hasProfile ? (
-            hasHouse ? (
-              <Navigate to="/app" replace />
-            ) : (
-              <Navigate to="/house-setup" replace />
-            )
-          ) : (
-            <Home />
-          )
+          !isAuthed ? <Home /> :
+          hasProfile ? (
+            hasHouse ? <Navigate to="/app" replace /> : <Navigate to="/house-setup" replace />
+          ) : <Home />
         }
       />
       <Route
         path="/signup"
         element={
-          !isAuthed ? (
-            <SignUp />
-          ) : hasProfile ? (
-            hasHouse ? (
-              <Navigate to="/app" replace />
-            ) : (
-              <Navigate to="/house-setup" replace />
-            )
-          ) : (
-            <Home />
-          )
+          !isAuthed ? <SignUp /> :
+          hasProfile ? (
+            hasHouse ? <Navigate to="/app" replace /> : <Navigate to="/house-setup" replace />
+          ) : <Home />
         }
       />
       <Route
         path="/login"
         element={
-          !isAuthed ? (
-            <LogIn />
-          ) : hasProfile ? (
-            hasHouse ? (
-              <Navigate to="/app" replace />
-            ) : (
-              <Navigate to="/house-setup" replace />
-            )
-          ) : (
-            <Home />
-          )
+          !isAuthed ? <LogIn /> :
+          hasProfile ? (
+            hasHouse ? <Navigate to="/app" replace /> : <Navigate to="/house-setup" replace />
+          ) : <Home />
         }
       />
 
@@ -214,46 +237,38 @@ export default function App() {
       <Route
         path="/house-setup"
         element={
-          isAuthed && hasProfile && !hasHouse ? (
-            <HouseSetup />
-          ) : isAuthed && hasProfile && hasHouse ? (
-            <Navigate to="/app" replace />
-          ) : (
-            <Navigate to="/" replace />
-          )
+          isAuthed && hasProfile && !hasHouse ? <HouseSetup /> :
+          isAuthed && hasProfile && hasHouse  ? <Navigate to="/app" replace /> :
+          <Navigate to="/" replace />
         }
       />
       <Route
         path="/house-create"
         element={
-          isAuthed && hasProfile && !hasHouse ? (
-            <HouseCreate onSuccess={refreshProfile} />
-          ) : isAuthed && hasProfile && hasHouse ? (
-            <Navigate to="/app" replace />
-          ) : (
-            <Navigate to="/" replace />
-          )
+          isAuthed && hasProfile && !hasHouse ? <HouseCreate onSuccess={refreshProfile} /> :
+          isAuthed && hasProfile && hasHouse  ? <Navigate to="/app" replace /> :
+          <Navigate to="/" replace />
         }
       />
       <Route
         path="/house-login"
         element={
-          isAuthed && hasProfile && !hasHouse ? (
-            <HouseLogin onSuccess={refreshProfile} />
-          ) : isAuthed && hasProfile && hasHouse ? (
-            <Navigate to="/app" replace />
-          ) : (
-            <Navigate to="/" replace />
-          )
+          isAuthed && hasProfile && !hasHouse ? <HouseLogin onSuccess={refreshProfile} /> :
+          isAuthed && hasProfile && hasHouse  ? <Navigate to="/app" replace /> :
+          <Navigate to="/" replace />
         }
       />
 
-      {/* APP — single route, tab switching handled inside AppLayout */}
+      {/* APP */}
       <Route
         path="/app"
         element={
           isAuthed && hasProfile && hasHouse ? (
-            <AppLayout profile={profile} refreshProfile={refreshProfile} />
+            <AppLayout
+              profile={profile}
+              members={members}
+              refreshProfile={refreshProfile}
+            />
           ) : isAuthed && hasProfile && !hasHouse ? (
             <Navigate to="/house-setup" replace />
           ) : (
@@ -262,11 +277,8 @@ export default function App() {
         }
       />
 
-      {/* Catch deep /app/* paths and redirect to /app */}
-      <Route
-        path="/app/*"
-        element={<Navigate to="/app" replace />}
-      />
+      {/* Catch deep /app/* and redirect */}
+      <Route path="/app/*" element={<Navigate to="/app" replace />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
