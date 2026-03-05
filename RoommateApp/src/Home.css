@@ -1,0 +1,343 @@
+/* ═══════════════════════════════════════════════════════════════
+   Home.css
+   Shared styles for: Home, HouseSetup, HouseCreate, HouseLogin
+   Integrates with the app's theme.css token system.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Fonts ──────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&family=Nunito:wght@400;700;900&display=swap');
+
+/* ── Page shell ─────────────────────────────────────────────── */
+.onboarding-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  background: var(--bg, #f4faf4);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Decorative background blobs — purely visual */
+.onboarding-page::before,
+.onboarding-page::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+.onboarding-page::before {
+  width: 520px;
+  height: 520px;
+  top: -160px;
+  right: -140px;
+  background: radial-gradient(circle, var(--green-100, #d9f2d9) 0%, transparent 70%);
+  opacity: 0.7;
+}
+.onboarding-page::after {
+  width: 380px;
+  height: 380px;
+  bottom: -120px;
+  left: -100px;
+  background: radial-gradient(circle, var(--green-100, #d9f2d9) 0%, transparent 70%);
+  opacity: 0.5;
+}
+
+/* ── Card ───────────────────────────────────────────────────── */
+.onboarding-card {
+  position: relative;
+  z-index: 1;
+  background: var(--white, #ffffff);
+  border: 1.5px solid var(--border, #c8e6c8);
+  border-radius: 24px;
+  padding: 48px 40px 40px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow:
+    0 4px 6px rgba(15, 61, 15, 0.04),
+    0 16px 40px rgba(15, 61, 15, 0.10);
+  animation: cardRise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes cardRise {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Wordmark / Logo ────────────────────────────────────────── */
+.onboarding-wordmark {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--green-900, #0f3d0f);
+  letter-spacing: -0.5px;
+  margin: 0 0 4px;
+  line-height: 1.1;
+}
+.onboarding-wordmark span {
+  color: var(--primary, #6fa86f);
+}
+
+.onboarding-tagline {
+  font-family: var(--font-body, 'Nunito', sans-serif);
+  font-size: 0.9rem;
+  color: var(--muted, #6b8f6b);
+  margin: 0 0 36px;
+}
+
+/* ── Page title (HouseSetup / HouseCreate / HouseLogin) ─────── */
+.onboarding-title {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--green-900, #0f3d0f);
+  margin: 0 0 6px;
+  line-height: 1.2;
+}
+
+.onboarding-subtitle {
+  font-family: var(--font-body, 'Nunito', sans-serif);
+  font-size: 0.875rem;
+  color: var(--muted, #6b8f6b);
+  margin: 0 0 28px;
+}
+
+/* ── Divider ────────────────────────────────────────────────── */
+.onboarding-divider {
+  height: 1px;
+  background: var(--border, #c8e6c8);
+  margin: 24px 0;
+}
+
+/* ── Primary action buttons ─────────────────────────────────── */
+.onboarding-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 20px;
+  border-radius: 14px;
+  border: 1.5px solid transparent;
+  font-family: var(--font-ui, 'Nunito', sans-serif);
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.13s, box-shadow 0.18s, background 0.18s, border-color 0.18s;
+  text-align: center;
+}
+.onboarding-btn:active { transform: scale(0.97); }
+
+/* Solid green — primary */
+.onboarding-btn-primary {
+  background: var(--primary, #6fa86f);
+  color: var(--white, #fff);
+  border-color: var(--primary, #6fa86f);
+  box-shadow: 0 4px 16px rgba(111, 168, 111, 0.28);
+}
+.onboarding-btn-primary:hover {
+  background: var(--primary-hover, #5c965c);
+  border-color: var(--primary-hover, #5c965c);
+  box-shadow: 0 6px 22px rgba(111, 168, 111, 0.38);
+}
+
+/* Outlined — secondary */
+.onboarding-btn-secondary {
+  background: var(--white, #fff);
+  color: var(--green-900, #0f3d0f);
+  border-color: var(--border, #c8e6c8);
+}
+.onboarding-btn-secondary:hover {
+  background: var(--surface, #f0f9f0);
+  border-color: var(--primary, #6fa86f);
+}
+
+/* Stacked button group */
+.onboarding-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+/* ── Text input ─────────────────────────────────────────────── */
+.onboarding-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.onboarding-label {
+  font-family: var(--font-ui, 'Nunito', sans-serif);
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--green-900, #0f3d0f);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.onboarding-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border, #c8e6c8);
+  background: var(--surface, #f0f9f0);
+  font-family: var(--font-body, 'Nunito', sans-serif);
+  font-size: 0.95rem;
+  color: var(--text, #1a2e1a);
+  transition: border-color 0.16s, box-shadow 0.16s;
+  box-sizing: border-box;
+}
+.onboarding-input:focus {
+  outline: none;
+  border-color: var(--primary, #6fa86f);
+  box-shadow: 0 0 0 3px rgba(111, 168, 111, 0.18);
+}
+.onboarding-input::placeholder {
+  color: var(--muted, #6b8f6b);
+  opacity: 0.7;
+}
+
+/* ── Invite code display ─────────────────────────────────────── */
+.onboarding-code-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 20px;
+  background: var(--surface, #f0f9f0);
+  border: 1.5px dashed var(--primary, #6fa86f);
+  border-radius: 16px;
+  margin-bottom: 24px;
+  animation: fadeIn 0.3s ease both;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.onboarding-code-label {
+  font-family: var(--font-ui, 'Nunito', sans-serif);
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--muted, #6b8f6b);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.onboarding-code {
+  font-family: 'Courier New', monospace;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--green-900, #0f3d0f);
+  letter-spacing: 0.22em;
+  line-height: 1;
+}
+
+.onboarding-code-hint {
+  font-size: 0.78rem;
+  color: var(--muted, #6b8f6b);
+  text-align: center;
+}
+
+/* ── Setup option cards (HouseSetup) ────────────────────────── */
+.onboarding-option-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.onboarding-option-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  border: 1.5px solid var(--border, #c8e6c8);
+  background: var(--white, #fff);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.16s, box-shadow 0.16s, transform 0.13s;
+  width: 100%;
+}
+.onboarding-option-card:hover {
+  border-color: var(--primary, #6fa86f);
+  box-shadow: 0 4px 18px rgba(111, 168, 111, 0.15);
+  transform: translateY(-1px);
+}
+.onboarding-option-card:active { transform: scale(0.98); }
+
+.onboarding-option-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--green-100, #d9f2d9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.onboarding-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.onboarding-option-title {
+  font-family: var(--font-ui, 'Nunito', sans-serif);
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--green-900, #0f3d0f);
+}
+
+.onboarding-option-desc {
+  font-size: 0.78rem;
+  color: var(--muted, #6b8f6b);
+}
+
+/* ── Back link ──────────────────────────────────────────────── */
+.onboarding-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-ui, 'Nunito', sans-serif);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted, #6b8f6b);
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-bottom: 20px;
+  padding: 0;
+  transition: color 0.15s;
+}
+.onboarding-back:hover { color: var(--primary, #6fa86f); }
+
+/* ── Error message ──────────────────────────────────────────── */
+.onboarding-error {
+  font-size: 0.82rem;
+  color: var(--danger, #c0392b);
+  background: var(--danger-light, #fdf2f0);
+  border: 1px solid var(--danger-border, #f5c6c0);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-top: -4px;
+  margin-bottom: 12px;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .onboarding-card {
+    padding: 36px 24px 32px;
+    border-radius: 20px;
+  }
+  .onboarding-wordmark { font-size: 1.9rem; }
+  .onboarding-code     { font-size: 1.6rem; letter-spacing: 0.16em; }
+}
