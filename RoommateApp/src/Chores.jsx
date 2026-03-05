@@ -64,7 +64,7 @@ export default function Chores({ householdId }) {
       return;
     }
 
-    // Base roommates — mirror the exact same shape used in onCreate's nameToId map
+    // Base roommates
     const baseRoommates = profiles.map((p) => ({
       id: p.id,
       name: p.id === user.id ? "You" : (p.display_name || "Unnamed"),
@@ -72,10 +72,10 @@ export default function Chores({ householdId }) {
     }));
     setRoommates(baseRoommates);
 
-    // Chores — include repeat_mask so it round-trips back to the UI
+    // Chores — include repeat_mask and points so they round-trip back to the UI
     const { data: chores, error: choresError } = await supabase
       .from("chores")
-      .select("id, name, due_date, description, household_id, status, repeat_mask")
+      .select("id, name, due_date, description, household_id, status, repeat_mask, points")
       .eq("household_id", hid)
       .eq("status", "ongoing");
 
@@ -94,9 +94,6 @@ export default function Chores({ householdId }) {
 
     const safeAssignments = assignmentsError || !assignments ? [] : assignments;
 
-    // Name map — "You" for the current user, display_name for everyone else.
-    // This mirrors what loadData sets on the roommates array so that
-    // ChoresWidget shows consistent names.
     const profileIdToName = new Map(
       profiles.map((p) => [p.id, p.id === user.id ? "You" : (p.display_name || "Unnamed")])
     );
@@ -126,7 +123,8 @@ export default function Chores({ householdId }) {
         status:         chore.status,
         assigneeIds:    assignedProfileIds,
         repeatDays:     [],
-        repeatBitmask:  chore.repeat_mask ?? 0,  // carry repeat_mask into UI
+        repeatBitmask:  chore.repeat_mask ?? 0,
+        points:         chore.points ?? null,   // ← carry points into UI
       };
 
       for (const pid of assignedProfileIds) {
@@ -167,7 +165,7 @@ export default function Chores({ householdId }) {
 
     if (meta?.mode === "finish") {
       const updates = {
-        status: "completed",
+        status:       "completed",
         completed_at: new Date().toISOString(),
       };
 
@@ -246,14 +244,13 @@ export default function Chores({ householdId }) {
             // All other names are looked up in the profiles table by matching
             // display_name AND household_id so we never cross household boundaries.
 
-            const rawAssignees = payload.peopleAssigned; // display-name strings only
+            const rawAssignees = payload.peopleAssigned;
 
             if (!Array.isArray(rawAssignees) || rawAssignees.length === 0) {
               console.error("[CreateChores] No assignees were added", { payload });
               return;
             }
 
-            // Get the current user's UUID (resolves "You")
             const {
               data: { user: currentUser },
               error: currentUserErr,
@@ -264,11 +261,8 @@ export default function Chores({ householdId }) {
               return;
             }
 
-            // Separate "You" from real display names that need a DB lookup
             const otherNames = rawAssignees.filter((n) => n !== "You");
 
-            // Query profiles table: match display_name IN otherNames AND household_id
-            // This guarantees we only resolve users who belong to the same household
             let profileRows = [];
             if (otherNames.length > 0) {
               const { data: foundProfiles, error: profileLookupErr } = await supabase
@@ -285,15 +279,11 @@ export default function Chores({ householdId }) {
               profileRows = foundProfiles ?? [];
             }
 
-            // Build display_name → UUID map from DB results
             const nameToId = new Map(profileRows.map((p) => [p.display_name, p.id]));
 
-            // Assemble final UUID array:
-            //   "You"          → currentUser.id  (auth, always available)
-            //   any other name → UUID from profiles table (or skipped if not found)
             const assignees = rawAssignees
               .map((n) => (n === "You" ? currentUser.id : nameToId.get(n)))
-              .filter(Boolean); // drop any name that didn't resolve
+              .filter(Boolean);
 
             if (assignees.length === 0) {
               console.error(
@@ -303,18 +293,15 @@ export default function Chores({ householdId }) {
               return;
             }
 
-            console.log("[CreateChores] resolved assignees:", {
-              rawAssignees,
-              assignees,
-            });
+            console.log("[CreateChores] resolved assignees:", { rawAssignees, assignees });
 
-            // ---- 3) Extract repeat_mask ------------------------------------------
-            //
-            // create-chores.jsx sends `repeatBitmask` — a 7-bit integer where
-            // Mon = MSB (64), Tue = 32, Wed = 16, Thu = 8, Fri = 4, Sat = 2, Sun = 1.
-            // Map it straight to the `repeat_mask` DB column. Default 0 = no repeat.
+            // ---- 3) Extract repeat_mask and points ------------------------------
             const repeat_mask =
               typeof payload?.repeatBitmask === "number" ? payload.repeatBitmask : 0;
+
+            // Points: null when not provided, otherwise a non-negative integer.
+            const points =
+              typeof payload?.points === "number" ? payload.points : null;
 
             // ---- 4) Snapshot assignment count (before) ---------------------------
             const { count: beforeCount, error: beforeErr } = await supabase
@@ -334,7 +321,7 @@ export default function Chores({ householdId }) {
               console.warn("[CreateChores] Could not compute beforeCount for chore_assignments.", beforeErr);
             }
 
-            // ---- 5) Insert chore (with repeat_mask) ------------------------------
+            // ---- 5) Insert chore ------------------------------------------------
             const { data: newChore, error: choreErr } = await supabase
               .from("chores")
               .insert({
@@ -343,7 +330,8 @@ export default function Chores({ householdId }) {
                 description,
                 due_date,
                 status:      "ongoing",
-                repeat_mask,           // ← was missing in the original
+                repeat_mask,
+                points,                // ← new
               })
               .select("id")
               .single();
@@ -353,10 +341,10 @@ export default function Chores({ householdId }) {
               return;
             }
 
-            // ---- 6) Insert chore_assignments (UUID rows only) --------------------
+            // ---- 6) Insert chore_assignments ------------------------------------
             const rows = assignees.map((profile_id) => ({
               chore_id:   newChore.id,
-              profile_id,            // ← guaranteed UUID, never a display-name string
+              profile_id,
             }));
 
             const { error: assignErr } = await supabase
@@ -409,6 +397,7 @@ export default function Chores({ householdId }) {
                 insertedForChore: verifyRows?.length ?? null,
                 chore_id:         newChore.id,
                 repeat_mask,
+                points,
               });
             } else {
               console.warn("[CreateChores] Expected chore_assignments to change but did not detect it.", {

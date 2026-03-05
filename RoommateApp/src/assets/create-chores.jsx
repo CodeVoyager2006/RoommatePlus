@@ -7,39 +7,24 @@ import "./create-chores.css";
  * Bitmask positions (MSB → LSB):
  *   Mon  Tue  Wed  Thu  Fri  Sat  Sun
  *    64   32   16    8    4    2    1
- *
- * Examples:
- *   Mon only          → 1000000 (64)
- *   Every weekday     → 1111100 (124)
- *   Every day         → 1111111 (127)
  */
 
 const DAY_ORDER = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-// Each day's bit value (Mon is MSB = 64)
 const DAY_BIT = {
-  Mon: 64,
-  Tue: 32,
-  Wed: 16,
-  Thu:  8,
-  Fri:  4,
-  Sat:  2,
-  Sun:  1,
+  Mon: 64, Tue: 32, Wed: 16, Thu: 8, Fri: 4, Sat: 2, Sun: 1,
 };
 
-/** Convert a Set of day strings → 7-bit bitmask integer */
 function daysToBitmask(daySet) {
   return DAY_ORDER.reduce((mask, day) => {
     return daySet.has(day) ? mask | DAY_BIT[day] : mask;
   }, 0);
 }
 
-/** Convert 7-bit bitmask integer → array of day strings */
 function bitmaskToDays(mask) {
   return DAY_ORDER.filter((day) => (mask & DAY_BIT[day]) !== 0);
 }
 
-/** Pretty-print selected days; collapse to "Every day" / "Weekdays" / "Weekends" when appropriate */
 function summariseDays(daySet) {
   if (daySet.size === 0) return "No repeat selected";
   if (daySet.size === 7) return "Every day";
@@ -51,7 +36,6 @@ function summariseDays(daySet) {
   if (weekend.every((d) => daySet.has(d)) && weekdays.every((d) => !daySet.has(d)))
     return "Weekends";
 
-  // Otherwise list in order
   return DAY_ORDER.filter((d) => daySet.has(d)).join(", ");
 }
 
@@ -63,18 +47,18 @@ export default function CreateChores({ isOpen, roommates = [], onCreate, onClose
     return Array.from(new Set(["You", ...names]));
   }, [roommates]);
 
-  const [title,       setTitle]       = useState("");
-  const [description, setDescription] = useState("");
-  const [dueDate,     setDueDate]     = useState("");
-  const [assignedTo,  setAssignedTo]  = useState([]);
+  const [title,        setTitle]        = useState("");
+  const [description,  setDescription]  = useState("");
+  const [dueDate,      setDueDate]      = useState("");
+  const [assignedTo,   setAssignedTo]   = useState([]);
+  const [points,       setPoints]       = useState("");   // ← new
 
-  // Use a Set for O(1) toggle lookups
   const [selectedDays, setSelectedDays] = useState(new Set());
 
-  const [errors,          setErrors]          = useState({});
-  const [showAssignPicker, setShowAssignPicker] = useState(false);
-  const [showClosePrompt,  setShowClosePrompt]  = useState(false);
-  const [isSaving,         setIsSaving]         = useState(false);
+  const [errors,           setErrors]           = useState({});
+  const [showAssignPicker, setShowAssignPicker]  = useState(false);
+  const [showClosePrompt,  setShowClosePrompt]   = useState(false);
+  const [isSaving,         setIsSaving]          = useState(false);
 
   const dateInputRef = useRef(null);
 
@@ -85,6 +69,7 @@ export default function CreateChores({ isOpen, roommates = [], onCreate, onClose
     setDescription("");
     setDueDate("");
     setAssignedTo([]);
+    setPoints("");
     setSelectedDays(new Set());
     setErrors({});
     setShowAssignPicker(false);
@@ -100,9 +85,9 @@ export default function CreateChores({ isOpen, roommates = [], onCreate, onClose
     description.trim() ||
     dueDate ||
     assignedTo.length > 0 ||
+    points !== "" ||
     selectedDays.size > 0;
 
-  // ── Derived bitmask (recomputed on every render, cheap) ───────────────────
   const repeatBitmask = daysToBitmask(selectedDays);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
@@ -129,9 +114,16 @@ export default function CreateChores({ isOpen, roommates = [], onCreate, onClose
 
   const validate = () => {
     const next = {};
-    if (!title.trim())    next.title     = "Chore title is required.";
-    if (!dueDate)         next.dueDate   = "Expected finish time is required.";
-    if (!assignedTo.length) next.assignedTo = "Assign at least one person.";
+    if (!title.trim())        next.title      = "Chore title is required.";
+    if (!dueDate)             next.dueDate    = "Expected finish time is required.";
+    if (!assignedTo.length)   next.assignedTo = "Assign at least one person.";
+
+    // Points: optional, but if entered must be a non-negative integer
+    if (points !== "") {
+      const n = Number(points);
+      if (!Number.isInteger(n) || n < 0) next.points = "Points must be a whole number (0 or more).";
+    }
+
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -146,16 +138,16 @@ export default function CreateChores({ isOpen, roommates = [], onCreate, onClose
   const handleSave = async () => {
     setErrors({});
     if (!validate()) return;
-    console.log(assignedTo);
+
     const payload = {
       title:          title.trim(),
       description:    description.trim(),
       dueDate,
-      peopleAssigned: assignedTo, //for chores widget
-      // Human-readable array kept for UI display elsewhere
+      peopleAssigned: assignedTo,
       repeatDays:     bitmaskToDays(selectedDays),
-      // Bitmask integer for database storage
       repeatBitmask,
+      // Points: send as integer when provided, otherwise null
+      points: points !== "" ? parseInt(points, 10) : null,
     };
 
     try {
@@ -228,6 +220,22 @@ export default function CreateChores({ isOpen, roommates = [], onCreate, onClose
             </div>
           </div>
 
+          {/* Points */}
+          <div className="cc-field">
+            <label className="cc-label">Points (optional)</label>
+            <input
+              className={`cc-input cc-points-input ${errors.points ? "cc-input-error" : ""}`}
+              type="number"
+              min="0"
+              step="1"
+              value={points}
+              onChange={(e) => setPoints(e.target.value)}
+              placeholder="e.g. 10"
+              aria-label="Points awarded for completing this chore"
+            />
+            {errors.points && <div className="cc-error">{errors.points}</div>}
+          </div>
+
           {/* Assign to */}
           <div className="cc-field">
             <label className="cc-label">Assign to</label>
@@ -272,12 +280,11 @@ export default function CreateChores({ isOpen, roommates = [], onCreate, onClose
             )}
           </div>
 
-          {/* ── Repeat (bitmask) ── */}
+          {/* Repeat (bitmask) */}
           <div className="cc-field">
             <label className="cc-label">Repeat (optional)</label>
 
             <div className="cc-repeat">
-              {/* Day toggle pills */}
               <div className="cc-repeat-days" role="group" aria-label="Repeat days">
                 {DAY_ORDER.map((day) => {
                   const active = selectedDays.has(day);
@@ -296,12 +303,10 @@ export default function CreateChores({ isOpen, roommates = [], onCreate, onClose
                 })}
               </div>
 
-              {/* Summary row */}
               <div className="cc-repeat-summary">
                 <span className="cc-repeat-text">
                   {summariseDays(selectedDays)}
                 </span>
-                {/* Show bitmask value as subtle hint when any day selected */}
                 {selectedDays.size > 0 && (
                   <span className="cc-repeat-bitmask" title="Bitmask value stored in DB">
                     {repeatBitmask.toString(2).padStart(7, "0")}
