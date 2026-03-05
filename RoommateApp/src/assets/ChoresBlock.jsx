@@ -34,15 +34,6 @@ export default function ChoresBlock({
   repeatBitmask,
   onClick,
 }) {
-  const formatDate = (d) => {
-    if (!d) return "";
-    const dt = new Date(d);
-    if (Number.isNaN(dt.getTime())) return String(d);
-    return `${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(
-      2,
-      "0"
-    )}-${dt.getFullYear()}`;
-  };
 
   const handleKeyDown = (e) => {
     if (!onClick) return;
@@ -69,7 +60,7 @@ export default function ChoresBlock({
       aria-label={title ? `Chore: ${title}` : "Chore"}
     >
       <div className="title">{title || "Untitled chore"}</div>
-      <div className="due-date">{formatDate(dueDate) || "No due date"}</div>
+      <div className="due-date">{(dueDate) || "No due date"}</div>
 
       {/* description removed from card — visible in popup only */}
 

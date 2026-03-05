@@ -41,16 +41,6 @@ export default function ChoresPopup({ chore, onClose, onDelete }) {
 
   const canAct = useMemo(() => typeof onDelete === "function", [onDelete]);
 
-  const formatDate = (d) => {
-    if (!d) return "";
-    const dt = new Date(d);
-    if (Number.isNaN(dt.getTime())) return String(d);
-    return `${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(
-      2,
-      "0"
-    )}-${dt.getFullYear()}`;
-  };
-
   // ── Action handlers — each calls onDelete exactly once ───────────────────
 
   const submitAbandon = async () => {
@@ -107,7 +97,7 @@ export default function ChoresPopup({ chore, onClose, onDelete }) {
           <div className="chore-popup-row">List owner: {chore.roommateName}</div>
         )}
 
-        <div className="chore-popup-row">Due: {formatDate(chore.dueDate) || "No due date"}</div>
+        <div className="chore-popup-row">Due: {chore.dueDate || "No due date"}</div>
 
         <div className="chore-popup-row">
           Description:

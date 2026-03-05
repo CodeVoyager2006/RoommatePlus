@@ -19,9 +19,14 @@ import Setting from "./Setting";
 
 /* =========================
    AUTHENTICATED APP LAYOUT
-   Mounted at /app/*
    ========================= */
 function AppLayout({ profile }) {
+  // Manage the active tab in state instead of via React Router.
+  // All tab components are always mounted — only their visibility changes.
+  // This prevents React Router from unmounting/remounting them on every
+  // tab switch, which would re-trigger loadData() each time.
+  const [activeTab, setActiveTab] = useState("chores");
+
   return (
     <>
       <Header
@@ -29,16 +34,47 @@ function AppLayout({ profile }) {
         points={profile.points}
         streaks={profile.streaks}
       />
-      <MenuBar />
 
-      <Routes>
-        {/* Pass household_id so Chores can fetch all members/chores in same house */}
-        <Route index element={<Chores householdId={profile.household_id} />} />
-        <Route path="chat" element={<Chat />} />
-        <Route path="machine" element={<Machine />} />
-        <Route path="setting" element={<Setting householdId={profile.household_id} />} />
-        <Route path="*" element={<Navigate to="/app" replace />} />
-      </Routes>
+      {/* MenuBar receives the active tab + a setter instead of using navigate() */}
+      <MenuBar activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {/*
+        All tabs are rendered simultaneously but hidden when inactive.
+        Using visibility:hidden + height:0 + overflow:hidden (rather than
+        display:none) keeps the components fully mounted while preventing
+        layout interference from hidden tabs.
+      */}
+      <div
+        style={activeTab === "chores"
+          ? undefined
+          : { visibility: "hidden", height: 0, overflow: "hidden" }}
+      >
+        <Chores householdId={profile.household_id} />
+      </div>
+
+      <div
+        style={activeTab === "chat"
+          ? undefined
+          : { visibility: "hidden", height: 0, overflow: "hidden" }}
+      >
+        <Chat />
+      </div>
+
+      <div
+        style={activeTab === "machine"
+          ? undefined
+          : { visibility: "hidden", height: 0, overflow: "hidden" }}
+      >
+        <Machine />
+      </div>
+
+      <div
+        style={activeTab === "setting"
+          ? undefined
+          : { visibility: "hidden", height: 0, overflow: "hidden" }}
+      >
+        <Setting householdId={profile.household_id} />
+      </div>
     </>
   );
 }
@@ -118,9 +154,9 @@ export default function App() {
 
   if (sessionLoading || profileLoading) return null;
 
-  const isAuthed  = !!session?.user;
+  const isAuthed   = !!session?.user;
   const hasProfile = !!profile;
-  const hasHouse  = !!profile?.household_id;
+  const hasHouse   = !!profile?.household_id;
 
   return (
     <Routes>
@@ -212,9 +248,9 @@ export default function App() {
         }
       />
 
-      {/* APP */}
+      {/* APP — single route, tab switching handled inside AppLayout */}
       <Route
-        path="/app/*"
+        path="/app"
         element={
           isAuthed && hasProfile && hasHouse ? (
             <AppLayout profile={profile} />
@@ -224,6 +260,12 @@ export default function App() {
             <Navigate to="/" replace />
           )
         }
+      />
+
+      {/* Catch deep /app/* paths and redirect to /app */}
+      <Route
+        path="/app/*"
+        element={<Navigate to="/app" replace />}
       />
 
       <Route path="*" element={<Navigate to="/" replace />} />

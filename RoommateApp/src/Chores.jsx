@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./supabaseClient";
 
 import ChoresWidget from "./assets/ChoresWidget";
@@ -14,6 +14,12 @@ export default function Chores({ householdId }) {
 
   const safeHouseholdId = useMemo(() => householdId ?? null, [householdId]);
   const [resolvedHouseholdId, setResolvedHouseholdId] = useState(null);
+
+  // ── Overdue check ────────────────────────────────────────────────────────────
+  // Tracks whether we've already run the overdue check this session so it
+  // only fires once on mount, not on every subsequent loadData() call
+  // (e.g. after creating a chore or finishing one).
+  const overdueChecked = useRef(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -105,6 +111,9 @@ export default function Chores({ householdId }) {
     }));
     const idxByProfileId = new Map(updated.map((r, idx) => [r.id, idx]));
 
+    // Collect chores as UI objects first — overdue check runs after
+    const allChoresForUI = [];
+
     for (const chore of chores) {
       const assignedProfileIds = safeAssignments
         .filter((a) => a.chore_id === chore.id)
@@ -124,8 +133,10 @@ export default function Chores({ householdId }) {
         assigneeIds:    assignedProfileIds,
         repeatDays:     [],
         repeatBitmask:  chore.repeat_mask ?? 0,
-        points:         chore.points ?? null,   // ← carry points into UI
+        points:         chore.points ?? null,
       };
+
+      allChoresForUI.push(choreForUI);
 
       for (const pid of assignedProfileIds) {
         const idx = idxByProfileId.get(pid);
@@ -135,7 +146,72 @@ export default function Chores({ householdId }) {
 
     setRoommates(updated);
     setLoading(false);
-  }, [safeHouseholdId]);
+
+    // ── Overdue check (runs once per mount) ─────────────────────────────────
+    // Only execute on the very first loadData() call so tab switches and
+    // post-action refreshes don't trigger it again.
+    if (!overdueChecked.current) {
+      overdueChecked.current = true;
+      await markOverdueChores(allChoresForUI);
+    }
+  }, [safeHouseholdId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── markOverdueChores ───────────────────────────────────────────────────────
+  // Steps:
+  //   1. Capture the current timestamp once.
+  //   2. Walk each unique ongoing chore.
+  //   3. If due_date < today (i.e. the chore is PAST its due date), update it
+  //      to status "passed" with drop_reason "passed due date".
+  //   4. Re-fetch so the UI reflects the updated list.
+  const markOverdueChores = useCallback(async (choresForUI) => {
+    // Step 1 — current timestamp (start of today, so a chore due today is not yet overdue)
+    const now = new Date();
+    // Normalise to midnight so "due today" is still considered ongoing
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    // Deduplicate by id (each chore may appear under multiple roommates)
+    const seen = new Set();
+    const unique = choresForUI.filter((c) => {
+      if (seen.has(c.id)) return false;
+      seen.add(c.id);
+      return true;
+    });
+
+    const overdueIds = [];
+
+    for (const chore of unique) {
+      if (!chore.dueDate) continue; // no due date → skip
+
+      const due = new Date(chore.dueDate);
+      // due_date from Supabase is a date string "YYYY-MM-DD"; parsing it gives
+      // midnight UTC, so compare against UTC midnight of today to be consistent.
+      const dueUTC  = new Date(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate());
+      const todayUTC = new Date(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+
+      // Step 3 — overdue when the due date is strictly before today
+      if (dueUTC < todayUTC) {
+        overdueIds.push(chore.id);
+      }
+    }
+
+    if (overdueIds.length === 0) return;
+
+    console.log(`[Chores] marking ${overdueIds.length} overdue chore(s) as passed:`, overdueIds);
+
+    // Step 3 — bulk update in one DB call rather than one per chore
+    const { error } = await supabase
+      .from("chores")
+      .update({ status: "passed", drop_reason: "passed due date" })
+      .in("id", overdueIds);
+
+    if (error) {
+      console.error("[Chores] overdue bulk update error:", error);
+      return;
+    }
+
+    // Step 4 — refresh so overdue chores disappear from the UI
+    await loadData();
+  }, [loadData]);
 
   useEffect(() => {
     loadData();
@@ -216,6 +292,7 @@ export default function Chores({ householdId }) {
         roommates={roommates.map((r) => ({ id: r.id, name: r.name }))}
         onClose={() => setIsCreateOpen(false)}
         onCreate={async (payload) => {
+          console.log(payload);
           try {
             // ---- 0) Preconditions ----
             if (!resolvedHouseholdId) {
@@ -236,14 +313,6 @@ export default function Chores({ householdId }) {
             }
 
             // ---- 2) Resolve assignees → UUIDs via profiles table -----------------
-            //
-            // payload.peopleAssigned is always an array of display-name strings,
-            // e.g. ["You", "Roommate #1"].
-            //
-            // "You" is the currently logged-in user — resolved via getUser().
-            // All other names are looked up in the profiles table by matching
-            // display_name AND household_id so we never cross household boundaries.
-
             const rawAssignees = payload.peopleAssigned;
 
             if (!Array.isArray(rawAssignees) || rawAssignees.length === 0) {
@@ -299,7 +368,6 @@ export default function Chores({ householdId }) {
             const repeat_mask =
               typeof payload?.repeatBitmask === "number" ? payload.repeatBitmask : 0;
 
-            // Points: null when not provided, otherwise a non-negative integer.
             const points =
               typeof payload?.points === "number" ? payload.points : null;
 
@@ -331,7 +399,7 @@ export default function Chores({ householdId }) {
                 due_date,
                 status:      "ongoing",
                 repeat_mask,
-                points,                // ← new
+                points,
               })
               .select("id")
               .single();
