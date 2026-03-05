@@ -1,72 +1,42 @@
 /* MembersList.css */
 
-.ml-wrap {
-  width: 100%;
-  box-sizing: border-box;
-}
+.ml-wrap { width: 100%; box-sizing: border-box; }
 
 .ml-topbar {
-  display: grid;
-  grid-template-columns: 44px 1fr;
-  gap: 10px;
-  align-items: center;
-  padding: 10px 0 8px;
+  display: grid; grid-template-columns: 44px 1fr;
+  gap: 10px; align-items: center;
+  padding: 10px 0 10px;
 }
 
 .ml-back {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text);
-  font-weight: 900;
-  cursor: pointer;
-  font-size: 18px;
+  width: 44px; height: 44px;
+  border-radius: var(--r-md);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--primary-dark);
+  font-weight: 900; font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
 }
-
-.ml-back:hover {
-  background: #eef2ff;
-}
-
-.ml-back:focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: 2px;
-}
+.ml-back:hover { background: var(--primary-light); border-color: var(--green-300); }
+.ml-back:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
 .ml-topbar-title {
-  font-size: 14px;
-  font-weight: 900;
-  color: #111827;
+  font-family: var(--font-ui);
+  font-size: 16px; font-weight: 900;
+  color: var(--green-900);
 }
 
-.ml-list {
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
+.ml-list { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
 
 .ml-row {
-  width: 100%;
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   background: var(--surface);
-  border-radius: 14px;
-  padding: 12px;
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  box-sizing: border-box;
+  border-radius: var(--r-lg);
+  padding: 12px 14px;
+  display: flex; gap: 12px; align-items: center;
+  transition: background .18s, border-color .18s;
 }
+.ml-row:hover { background: var(--primary-light); border-color: var(--green-300); }
 
-.ml-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.ml-name {
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--text);
-}
+.ml-meta { display: flex; flex-direction: column; gap: 4px; }
+.ml-name { font-family: var(--font-ui); font-size: 14px; font-weight: 800; color: var(--text); }

@@ -3,42 +3,86 @@ import "./ChoresComponent.css";
 
 /**
  * ChoresPopup
- * Delete flows:
- *  - Abandon Chore: prompt reason -> submit -> delete
- *  - Mark as finish: prompt image -> submit -> delete
  *
- * For now: we only delete the chore. Reason/image are collected for UI only.
+ * Props:
+ * - chore: {
+ *     id, title, dueDate, description, peopleAssigned,
+ *     repeatBitmask?, roommateName?, ...
+ *   }
+ * - onClose: () => void
+ * - onDelete: (chore, meta) => Promise<void> | void
+ *     meta:
+ *      - { mode: "abandon", reason: string }
+ *      - { mode: "finish", imageFile: File | null }
  */
+
+const DAY_ORDER    = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DAY_BIT      = { Mon: 64, Tue: 32, Wed: 16, Thu: 8, Fri: 4, Sat: 2, Sun: 1 };
+const WEEKDAY_MASK = 64 | 32 | 16 | 8 | 4;
+const WEEKEND_MASK = 2  | 1;
+const ALL_MASK     = 127;
+
+function repeatLabel(bitmask) {
+  if (!bitmask || bitmask === 0) return null;
+  if (bitmask === ALL_MASK)     return "Every day";
+  if (bitmask === WEEKDAY_MASK) return "Every weekday";
+  if (bitmask === WEEKEND_MASK) return "Weekend";
+  return DAY_ORDER.filter((d) => (bitmask & DAY_BIT[d]) !== 0).join(", ");
+}
+
 export default function ChoresPopup({ chore, onClose, onDelete }) {
   if (!chore) return null;
 
-  const [flow, setFlow] = useState(null); // null | "abandon" | "finish"
+  const [flow,          setFlow]          = useState(null); // null | "abandon" | "finish"
   const [abandonReason, setAbandonReason] = useState("");
-  const [finishImage, setFinishImage] = useState(null);
+  const [finishImage,   setFinishImage]   = useState(null);
+  const [actionError,   setActionError]   = useState("");
+  const [isActing,      setIsActing]      = useState(false);
 
-  const formatDate = (d) => {
-    if (!d) return "";
-    const dt = new Date(d);
-    if (isNaN(dt)) return d;
-    return `${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(
-      2,
-      "0"
-    )}-${dt.getFullYear()}`;
+  const canAct = useMemo(() => typeof onDelete === "function", [onDelete]);
+
+  // ── Action handlers — each calls onDelete exactly once ───────────────────
+
+  const submitAbandon = async () => {
+    if (!canAct || isActing) return;
+    setActionError("");
+    setIsActing(true);
+    try {
+      console.log("[ChoresPopup] submitAbandon", { choreId: chore.id, reason: abandonReason });
+      await Promise.resolve(onDelete(chore, { mode: "abandon", reason: abandonReason }));
+      setFlow(null);
+      setAbandonReason("");
+    } catch (e) {
+      console.error("[ChoresPopup] abandon failed:", e);
+      setActionError(e?.message || "Abandon failed. Check RLS and console logs.");
+    } finally {
+      setIsActing(false);
+    }
   };
 
-  const canDelete = useMemo(() => typeof onDelete === "function", [onDelete]);
-
-  const submitAbandon = () => {
-    if (!canDelete) return;
-    onDelete(chore, { mode: "abandon", reason: abandonReason });
-    setFlow(null);
+  const submitFinish = async () => {
+    if (!canAct || isActing) return;
+    setActionError("");
+    setIsActing(true);
+    try {
+      console.log("[ChoresPopup] submitFinish", { choreId: chore.id, hasFile: !!finishImage });
+      await Promise.resolve(onDelete(chore, { mode: "finish", imageFile: finishImage }));
+      setFlow(null);
+      setFinishImage(null);
+    } catch (e) {
+      console.error("[ChoresPopup] finish failed:", e);
+      setActionError(e?.message || "Finish failed. Check RLS and console logs.");
+    } finally {
+      setIsActing(false);
+    }
   };
 
-  const submitFinish = () => {
-    if (!canDelete) return;
-    onDelete(chore, { mode: "finish", imageFile: finishImage });
-    setFlow(null);
-  };
+  const assignedText =
+    Array.isArray(chore.peopleAssigned) && chore.peopleAssigned.length > 0
+      ? chore.peopleAssigned.join(", ")
+      : "Unassigned";
+
+  const repeat = repeatLabel(chore.repeatBitmask);
 
   return (
     <div className="chore-popup-overlay" role="dialog" aria-modal="true" aria-label="Chore details">
@@ -47,26 +91,38 @@ export default function ChoresPopup({ chore, onClose, onDelete }) {
           ×
         </button>
 
-        <h3 className="chore-popup-title">{chore.title}</h3>
+        <h3 className="chore-popup-title">{chore.title || "Untitled chore"}</h3>
 
-        {chore.roommateName && <div className="chore-popup-row">List owner: {chore.roommateName}</div>}
+        {chore.roommateName && (
+          <div className="chore-popup-row">List owner: {chore.roommateName}</div>
+        )}
 
-        <div className="chore-popup-row">Due: {formatDate(chore.dueDate)}</div>
+        <div className="chore-popup-row">Due: {chore.dueDate || "No due date"}</div>
 
         <div className="chore-popup-row">
           Description:
-          <div className="chore-popup-description">{chore.description || ""}</div>
+          <div className="chore-popup-description">{chore.description || "No description"}</div>
         </div>
 
-        <div className="chore-popup-row">Assigned to: {chore.peopleAssigned?.join(", ")}</div>
+        <div className="chore-popup-row">Assigned to: {assignedText}</div>
 
-        {/* Delete actions */}
+        {repeat && (
+          <div className="chore-popup-row">
+            Repeats: <span className="chore-popup-repeat">🔁 {repeat}</span>
+          </div>
+        )}
+
+        {actionError && (
+          <div className="chore-popup-error" role="alert">{actionError}</div>
+        )}
+
+        {/* Actions */}
         <div className="chore-popup-actions" aria-label="Chore actions">
           <button
             type="button"
             className="chore-action-btn danger"
             onClick={() => setFlow("abandon")}
-            disabled={!canDelete}
+            disabled={!canAct || isActing}
           >
             Abandon Chore
           </button>
@@ -74,7 +130,7 @@ export default function ChoresPopup({ chore, onClose, onDelete }) {
             type="button"
             className="chore-action-btn primary"
             onClick={() => setFlow("finish")}
-            disabled={!canDelete}
+            disabled={!canAct || isActing}
           >
             Mark as finish
           </button>
@@ -82,22 +138,37 @@ export default function ChoresPopup({ chore, onClose, onDelete }) {
 
         {/* Abandon prompt */}
         {flow === "abandon" && (
-          <div className="chore-action-overlay" role="alertdialog" aria-modal="true" aria-label="Abandon chore">
+          <div
+            className="chore-action-overlay"
+            role="alertdialog"
+            aria-modal="true"
+            aria-label="Abandon chore"
+          >
             <div className="chore-action-card">
               <div className="chore-action-title">Reason to abandon</div>
               <textarea
                 className="chore-action-textarea"
                 rows={4}
-                placeholder="(Optional for now)"
+                placeholder="(Optional)"
                 value={abandonReason}
                 onChange={(e) => setAbandonReason(e.target.value)}
               />
               <div className="chore-action-buttons">
-                <button type="button" className="chore-action-small" onClick={() => setFlow(null)}>
+                <button
+                  type="button"
+                  className="chore-action-small"
+                  onClick={() => setFlow(null)}
+                  disabled={isActing}
+                >
                   Cancel
                 </button>
-                <button type="button" className="chore-action-small danger" onClick={submitAbandon}>
-                  Submit
+                <button
+                  type="button"
+                  className="chore-action-small danger"
+                  onClick={submitAbandon}
+                  disabled={!canAct || isActing}
+                >
+                  {isActing ? "Submitting…" : "Submit"}
                 </button>
               </div>
             </div>
@@ -106,7 +177,12 @@ export default function ChoresPopup({ chore, onClose, onDelete }) {
 
         {/* Finish prompt */}
         {flow === "finish" && (
-          <div className="chore-action-overlay" role="alertdialog" aria-modal="true" aria-label="Finish chore">
+          <div
+            className="chore-action-overlay"
+            role="alertdialog"
+            aria-modal="true"
+            aria-label="Finish chore"
+          >
             <div className="chore-action-card">
               <div className="chore-action-title">Upload result image</div>
               <input
@@ -116,13 +192,23 @@ export default function ChoresPopup({ chore, onClose, onDelete }) {
                 capture="environment"
                 onChange={(e) => setFinishImage(e.target.files?.[0] || null)}
               />
-              <div className="chore-action-hint">(Optional for now)</div>
+              <div className="chore-action-hint">(Optional)</div>
               <div className="chore-action-buttons">
-                <button type="button" className="chore-action-small" onClick={() => setFlow(null)}>
+                <button
+                  type="button"
+                  className="chore-action-small"
+                  onClick={() => setFlow(null)}
+                  disabled={isActing}
+                >
                   Cancel
                 </button>
-                <button type="button" className="chore-action-small primary" onClick={submitFinish}>
-                  Submit
+                <button
+                  type="button"
+                  className="chore-action-small primary"
+                  onClick={submitFinish}
+                  disabled={!canAct || isActing}
+                >
+                  {isActing ? "Submitting…" : "Submit"}
                 </button>
               </div>
             </div>

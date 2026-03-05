@@ -7,7 +7,7 @@ import "./Header.css";
  * @param streak a number that stores user streak
  * @returns 
  */
-export default function Header({ user = {name, points, streak} }) {
+export default function Header({displayName, points, streaks}) {
   return (
     <header className="app-header">
       <div className="header-left">
@@ -15,14 +15,14 @@ export default function Header({ user = {name, points, streak} }) {
           {/* Replace with: <img src={user.avatar} alt="avatar" /> */}
         </div>
         <div className="user-info">
-          <div className="user-name">{user.name}</div>
-          <div className="user-pts">PTs <span className="pts-value">{user.points}</span></div>
+          <div className="user-name">{displayName}</div>
+          <div className="user-pts">PTs <span className="pts-value">{points}</span></div>
         </div>
       </div>
 
       <div className="header-right">
         <div className="streak">
-          <div className="streak-value">Streaks: {user.streak}</div>
+          <div className="streak-value">Streaks: {streaks}</div>
         </div>
       </div>
     </header>

@@ -1,121 +1,49 @@
-:root {
-  --app-header-height: 88px;
-  --app-bottomnav-height: 86px;
+/* App.css – shell layout only; colours come from theme.css */
 
-  /* High-contrast palette */
-  --bg: #ffffff;
-  --surface: #f8fafc;     /* light card bg */
-  --surface-2: #eef2f7;   /* input bg */
-  --border: #cbd5e1;
-
-  --text: #0f172a;        /* very dark text */
-  --muted: #334155;       /* readable muted text */
-
-  --primary: #1d4ed8;     /* strong blue */
-  --primary-hover: #1e40af;
-  --primary-text: #ffffff;
-
-  --danger: #b91c1c;
-  --danger-hover: #991b1b;
-
-  --focus: #f59e0b;       /* visible focus ring */
-}
-
-.chat-page {
+.app-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
   background: var(--bg);
-  color: var(--text);
 }
 
+.app-content {
+  flex: 1;
+  padding-top: var(--app-header-height);
+  padding-bottom: var(--app-bottomnav-height);
+  background: var(--bg);
+}
+
+/* ── Chat composer (reused in Chat + ThreadView) ─────── */
 .chat-composer {
-  background: var(--surface);
+  background: var(--surface-2);
   border: 1px solid var(--border);
+  border-radius: var(--r-lg);
 }
 
 .chat-composer__input {
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
+  border-radius: var(--r-md);
+  font-family: var(--font-body);
 }
-
-.chat-composer__input::placeholder {
-  color: var(--muted);
-  opacity: 0.9;
-}
+.chat-composer__input::placeholder { color: var(--muted); }
 
 .chat-composer__btn {
-  border: 1px solid var(--primary);
   background: var(--primary);
+  border-color: var(--primary);
   color: var(--primary-text);
-  font-weight: 700;
+  font-weight: 800;
+  border-radius: var(--r-md);
 }
-
 .chat-composer__btn:hover:not(:disabled) {
   background: var(--primary-hover);
   border-color: var(--primary-hover);
 }
-
 .chat-composer__btn:disabled {
-  opacity: 0.6;
-  background: #93c5fd;
-  border-color: #93c5fd;
-  color: #0f172a;
-}
-
-.chat-composer__btn:focus-visible,
-.chat-composer__input:focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: 2px;
-}
-
-
-html, body, #root {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  width: 100%;
-  background: #ffffff; /* set the same background as the app */
-  box-sizing: border-box;
-}
-
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
+  opacity: 0.55;
+  background: var(--green-200);
+  border-color: var(--green-200);
+  color: var(--green-900);
 }
