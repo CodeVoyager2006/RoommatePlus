@@ -6,7 +6,7 @@ import ChoresPopup from "./assets/ChoresPopup";
 import CreateChores from "./assets/create-chores";
 import "./assets/ChoresComponent.css";
 
-export default function Chores({ householdId }) {
+export default function Chores({ householdId, refreshProfile }) {
   const [roommates, setRoommates] = useState([]);
   const [selectedChore, setSelectedChore] = useState(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -15,32 +15,15 @@ export default function Chores({ householdId }) {
   const safeHouseholdId = useMemo(() => householdId ?? null, [householdId]);
   const [resolvedHouseholdId, setResolvedHouseholdId] = useState(null);
 
-  // ── Overdue check ────────────────────────────────────────────────────────────
-  // Tracks whether we've already run the overdue check this session so it
-  // only fires once on mount, not on every subsequent loadData() call
-  // (e.g. after creating a chore or finishing one).
+  // Tracks whether the overdue check has already run this mount so it only
+  // fires once — not on every post-action loadData() call.
   const overdueChecked = useRef(false);
 
-  // ── hide chores completed/abandoned today ─────────────────────────────────────
-  // If completed_at OR abandoned_at is "today" (local day), do not show the chore.
-  const shouldHideChoreBecauseDoneToday = (chore) => {
-    const isToday = (ts) => {
-      if (!ts) return false;
-      const d = new Date(ts);
-      if (Number.isNaN(d.getTime())) return false;
-
-      const now = new Date();
-      return (
-        d.getFullYear() === now.getFullYear() &&
-        d.getMonth() === now.getMonth() &&
-        d.getDate() === now.getDate()
-      );
-    };
-
-    return isToday(chore.completed_at) || isToday(chore.abandoned_at);
-  };
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  // ── Core fetch ──────────────────────────────────────────────────────────────
+  // `silent` — when true, skips setLoading(true) so the UI doesn't flash blank.
+  //            Used by the overdue check's second fetch.
+  const loadData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
 
     const {
       data: { user },
@@ -88,36 +71,27 @@ export default function Chores({ householdId }) {
       return;
     }
 
-    // Base roommates
-    const baseRoommates = profiles.map((p) => ({
-      id: p.id,
-      name: p.id === user.id ? "You" : (p.display_name || "Unnamed"),
-      chores: [],
-    }));
-    setRoommates(baseRoommates);
-
-    await reviveRecurringChoresForToday(hid);
-    // Chores — include repeat_mask and points so they round-trip back to the UI
+    // Chores
     const { data: chores, error: choresError } = await supabase
       .from("chores")
-      .select("id, name, due_date, description, household_id, status, repeat_mask, points, completed_at, abandoned_at")
+      .select("id, name, due_date, description, household_id, status, repeat_mask, points")
       .eq("household_id", hid)
       .eq("status", "ongoing");
 
     if (choresError || !chores || chores.length === 0) {
+      // Still paint the empty roommate list
+      setRoommates(
+        profiles.map((p) => ({
+          id: p.id,
+          name: p.id === user.id ? "You" : (p.display_name || "Unnamed"),
+          chores: [],
+        }))
+      );
       setLoading(false);
       return;
     }
 
-    // Filter out chores that were completed or abandoned today
-    const visibleChores = chores.filter((c) => !shouldHideChoreBecauseDoneToday(c));
-
-    if (visibleChores.length === 0) {
-      setLoading(false);
-      return;
-    }
-
-    const choreIds = visibleChores.map((c) => c.id);
+    const choreIds = chores.map((c) => c.id);
 
     // Assignments
     const { data: assignments, error: assignmentsError } = await supabase
@@ -138,10 +112,10 @@ export default function Chores({ householdId }) {
     }));
     const idxByProfileId = new Map(updated.map((r, idx) => [r.id, idx]));
 
-    // Collect chores as UI objects first — overdue check runs after
+    // Build UI objects and collect them for the overdue check
     const allChoresForUI = [];
 
-    for (const chore of visibleChores) {
+    for (const chore of chores) {
       const assignedProfileIds = safeAssignments
         .filter((a) => a.chore_id === chore.id)
         .map((a) => a.profile_id);
@@ -151,16 +125,16 @@ export default function Chores({ householdId }) {
         .filter(Boolean);
 
       const choreForUI = {
-        id:             chore.id,
-        title:          chore.name,
-        dueDate:        chore.due_date,
-        description:    chore.description,
+        id:            chore.id,
+        title:         chore.name,
+        dueDate:       chore.due_date,
+        description:   chore.description,
         peopleAssigned: assignedNames,
-        status:         chore.status,
-        assigneeIds:    assignedProfileIds,
-        repeatDays:     [],
-        repeatBitmask:  chore.repeat_mask ?? 0,
-        points:         chore.points ?? null,
+        status:        chore.status,
+        assigneeIds:   assignedProfileIds,
+        repeatDays:    [],
+        repeatBitmask: chore.repeat_mask ?? 0,
+        points:        chore.points ?? null,
       };
 
       allChoresForUI.push(choreForUI);
@@ -174,196 +148,243 @@ export default function Chores({ householdId }) {
     setRoommates(updated);
     setLoading(false);
 
-    // ── Overdue check (runs once per mount) ─────────────────────────────────
-    // Only execute on the very first loadData() call so tab switches and
-    // post-action refreshes don't trigger it again.
+    // ── Overdue check — runs once per mount only ──────────────────────────
     if (!overdueChecked.current) {
       overdueChecked.current = true;
-      await markOverdueChores(allChoresForUI);
+      // Run inline here (not via a separate useCallback) to avoid the
+      // circular dependency: markOverdueChores → loadData → markOverdueChores
+      await runOverdueCheck(allChoresForUI);
     }
-  }, [safeHouseholdId]); // eslint-disable-line react-hooks/exhaustive-deps
-  // ── reviveRecurringChoresForToday ────────────────────────────────────────────
-// If today matches a chore's repeat_mask, ensure that chore is set to "ongoing".
-// Assumes repeat_mask is a bitmask where bit 0 = Sunday, 1 = Monday, ... 6 = Saturday
-const reviveRecurringChoresForToday = useCallback(async (hid) => {
-  if (!hid) return;
+  }, [safeHouseholdId]); // only re-create when household changes
 
-  // JS: 0=Sunday .. 6=Saturday
-  const todayIdx = new Date().getDay();
-  const todayBit = 1 << todayIdx;
-
-  // Fetch non-ongoing chores that have some repeat_mask set
-  const { data: candidates, error } = await supabase
-    .from("chores")
-    .select("id, status, repeat_mask")
-    .eq("household_id", hid)
-    .neq("status", "ongoing")
-    .gt("repeat_mask", 0);
-
-  if (error) {
-    console.error("[Chores] reviveRecurringChoresForToday fetch error:", error);
-    return;
-  }
-
-  if (!candidates || candidates.length === 0) return;
-
-  // Filter to chores whose repeat_mask includes today
-  const toReviveIds = candidates
-    .filter((c) => (((c.repeat_mask ?? 0) & todayBit) !== 0))
-    .map((c) => c.id);
-
-  if (toReviveIds.length === 0) return;
-
-  // Update in bulk
-  const { error: updateError } = await supabase
-    .from("chores")
-    .update({
-      status: "ongoing",
-    })
-    .in("id", toReviveIds);
-
-    if (updateError) {
-      console.error("[Chores] reviveRecurringChoresForToday update error:", updateError);
-    }
-  }, []);
-  // ── markOverdueChores ───────────────────────────────────────────────────────
-  // Steps:
-  //   1. Capture the current timestamp once.
-  //   2. Walk each unique ongoing chore.
-  //   3. If due_date < today (i.e. the chore is PAST its due date), update it
-  //      to status "passed" with drop_reason "passed due date".
-  //   4. Re-fetch so the UI reflects the updated list.
-  const markOverdueChores = useCallback(async (choresForUI) => {
-    // Step 1 — current timestamp (start of today, so a chore due today is not yet overdue)
+  // ── runOverdueCheck ─────────────────────────────────────────────────────────
+  // Defined as a plain async function inside the component so it closes over
+  // `loadData` without creating a useCallback circular dependency.
+  // Called only from within loadData, so it's always in scope.
+  async function runOverdueCheck(choresForUI) {
+    // Today at UTC midnight — chores due today are still "ongoing"
     const now = new Date();
-    // Normalise to midnight so "due today" is still considered ongoing
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
 
-    // Deduplicate by id (each chore may appear under multiple roommates)
+    // Deduplicate (same chore can appear under multiple roommates)
     const seen = new Set();
-    const unique = choresForUI.filter((c) => {
-      if (seen.has(c.id)) return false;
-      seen.add(c.id);
-      return true;
-    });
-
     const overdueIds = [];
 
-    for (const chore of unique) {
-      if (!chore.dueDate) continue; // no due date → skip
+    for (const chore of choresForUI) {
+      if (seen.has(chore.id)) continue;
+      seen.add(chore.id);
 
-      const due = new Date(chore.dueDate);
-      // due_date from Supabase is a date string "YYYY-MM-DD"; parsing it gives
-      // midnight UTC, so compare against UTC midnight of today to be consistent.
-      const dueUTC  = new Date(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate());
-      const todayUTC = new Date(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+      if (!chore.dueDate) continue;
 
-      // Step 3 — overdue when the due date is strictly before today
-      if (dueUTC < todayUTC) {
-        overdueIds.push(chore.id);
-      }
+      const d = new Date(chore.dueDate);
+      const dueUTC = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+
+      // Strictly before today → overdue
+      if (dueUTC < todayUTC) overdueIds.push(chore.id);
     }
 
     if (overdueIds.length === 0) return;
 
     console.log(`[Chores] marking ${overdueIds.length} overdue chore(s) as passed:`, overdueIds);
 
-    // Step 3 — bulk update in one DB call rather than one per chore
     const { error } = await supabase
       .from("chores")
-      .update({ status: "passed", drop_reason: "passed due date",
-        abandoned_at:'now()'
-       })
+      .update({ status: "passed", drop_reason: "passed due date" })
       .in("id", overdueIds);
-    
+
     if (error) {
       console.error("[Chores] overdue bulk update error:", error);
       return;
     }
 
-    // Step 4 — refresh so overdue chores disappear from the UI
-    await loadData();
-  }, [loadData]);
+    // Silent refresh — don't show the loading spinner for this background update
+    await loadData(true);
+  }
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  // ── Abandon / finish ─────────────────────────────────────────────────────────
+  // ── refreshProfileStats ─────────────────────────────────────────────────────
+  // Fetches the latest points + streaks for the current user from Supabase
+  // and calls the refreshProfile callback so App.jsx re-renders the Header
+  // with up-to-date values.  Safe to call after any chore action.
+  const refreshProfileStats = async () => {
+    const {
+      data: { user },
+      error: userErr,
+    } = await supabase.auth.getUser();
 
-  const uploadFinishProof = async (file, choreId) => {
-    if (!file) return null;
-
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${choreId}_${Date.now()}.${fileExt}`;
-    const filePath = `proofs/${fileName}`;
-
-    const { error } = await supabase.storage
-      .from("proves_of_finish")
-      .upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: false,
-        contentType: file.type,
-      });
-
-    if (error) {
-      console.error("[Chores] upload proof error:", error);
-      throw error;
-    }
-
-    const { data } = supabase.storage
-      .from("proves_of_finish")
-      .getPublicUrl(filePath);
-
-    return data.publicUrl;
-  };
-  const handleChoreAction = async (chore, meta) => {
-    if (!chore?.id) return;
-
-    if (meta?.mode === "abandon") {
-      const reason = (meta?.reason || "").trim() || "N/A";
-      
-      const { data, error } = await supabase
-        .from("chores")
-        .update({ status: "passed", drop_reason: reason, abandoned_at:'now()' })
-        .eq("id", chore.id)
-        .select("id,status,drop_reason")
-        .single();
-
-      console.log("[Chores] abandon result:", { data, error });
-      if (error) throw error;
-
-      setSelectedChore(null);
-      await loadData();
+    if (userErr || !user) {
+      console.warn("[Chores] refreshProfileStats — could not get user:", userErr);
       return;
     }
 
-    if (meta?.mode === "finish") {
-    let imageUrl = null;
+    const { data: profile, error: profileErr } = await supabase
+      .from("profiles")
+      .select("points, streaks")
+      .eq("id", user.id)
+      .single();
 
-    // Upload proof image if provided
-    if (meta?.imageFile) {
-      imageUrl = await uploadFinishProof(meta.imageFile, chore.id);
+    if (profileErr) {
+      console.warn("[Chores] refreshProfileStats — profile fetch error:", profileErr);
+      return;
     }
 
-    const updates = {
-      status:       "completed",
-      completed_at: new Date().toISOString(),
-      image_url:    imageUrl,
-    };
+    console.log("[Chores] refreshProfileStats →", { points: profile.points, streaks: profile.streaks });
 
-  const { data, error } = await supabase
-    .from("chores")
-    .update(updates)
-    .eq("id", chore.id)
-    .select("id,status,completed_at,image_url")
-    .single();
+    // Propagate the fresh values up to App.jsx so Header re-renders
+    refreshProfile?.();
+  };
 
-      console.log("[Chores] finish result:", { data, error });
-      if (error) throw error;
+  // ── Abandon / finish ─────────────────────────────────────────────────────────
+  const handleChoreAction = async (chore, meta) => {
+    if (!chore?.id) return;
+
+    // Get the current user once — needed by both branches for profile updates
+    const {
+      data: { user },
+      error: userErr,
+    } = await supabase.auth.getUser();
+    if (userErr || !user) throw new Error("Could not resolve current user.");
+
+    // ── Abandon ────────────────────────────────────────────────────────────────
+    if (meta?.mode === "abandon") {
+      const reason = (meta?.reason || "").trim() || "N/A";
+
+      // 1) Mark chore as passed
+      const { data: choreData, error: choreErr } = await supabase
+        .from("chores")
+        .update({ status: "passed", drop_reason: reason })
+        .eq("id", chore.id)
+        .select("id, status, drop_reason")
+        .single();
+
+      console.log("[Chores] abandon result:", { data: choreData, error: choreErr });
+      if (choreErr) throw choreErr;
+
+      // 2) Fetch current profile so we can safely decrement points
+      const { data: profile, error: profileFetchErr } = await supabase
+        .from("profiles")
+        .select("points, streaks")
+        .eq("id", user.id)
+        .single();
+
+      if (profileFetchErr) {
+        console.error("[Chores] abandon — could not fetch profile:", profileFetchErr);
+      } else {
+        const chorePoints  = typeof chore.points === "number" ? chore.points : 0;
+        const currentPoints = typeof profile.points  === "number" ? profile.points  : 0;
+
+        const { error: profileUpdateErr } = await supabase
+          .from("profiles")
+          .update({
+            // Deduct points (floor at 0 so it never goes negative)
+            points:  Math.max(0, currentPoints - chorePoints),
+            // Reset streak to 0 on abandon
+            streaks: 0,
+          })
+          .eq("id", user.id);
+
+        if (profileUpdateErr) {
+          console.error("[Chores] abandon — profile update error:", profileUpdateErr);
+        } else {
+          console.log("[Chores] abandon — profile updated:", {
+            pointsDeducted: chorePoints,
+            newPoints: Math.max(0, currentPoints - chorePoints),
+            streaksReset: true,
+          });
+        }
+      }
 
       setSelectedChore(null);
       await loadData();
+      await refreshProfileStats();
+      return;
+    }
+
+    // ── Finish ─────────────────────────────────────────────────────────────────
+    if (meta?.mode === "finish") {
+      const now = new Date();
+
+      // 1) Mark chore as completed
+      const { data: choreData, error: choreErr } = await supabase
+        .from("chores")
+        .update({ status: "completed", completed_at: now.toISOString() })
+        .eq("id", chore.id)
+        .select("id, status, completed_at")
+        .single();
+
+      console.log("[Chores] finish result:", { data: choreData, error: choreErr });
+      if (choreErr) throw choreErr;
+
+      // 2) Fetch current profile fields needed for streak + points logic
+      const { data: profile, error: profileFetchErr } = await supabase
+        .from("profiles")
+        .select("points, streaks, prev_streak_day")
+        .eq("id", user.id)
+        .single();
+
+      if (profileFetchErr) {
+        console.error("[Chores] finish — could not fetch profile:", profileFetchErr);
+      } else {
+        const chorePoints   = typeof chore.points === "number" ? chore.points : 0;
+        const currentPoints = typeof profile.points  === "number" ? profile.points  : 0;
+        const currentStreak = typeof profile.streaks === "number" ? profile.streaks : 0;
+
+        // ── Streak logic ──────────────────────────────────────────────────────
+        // Increment streak by 1 if and only if today is exactly 1 calendar day
+        // after prev_streak_day (consecutive days rule).
+        let newStreak = currentStreak;
+
+        if (profile.prev_streak_day) {
+          const prev = new Date(profile.prev_streak_day);
+          // Normalise both dates to local midnight for a clean day-diff
+          const prevMidnight = new Date(prev.getFullYear(), prev.getMonth(), prev.getDate());
+          const nowMidnight  = new Date(now.getFullYear(),  now.getMonth(),  now.getDate());
+          const diffDays = Math.round(
+            (nowMidnight.getTime() - prevMidnight.getTime()) / (1000 * 60 * 60 * 24)
+          );
+
+          if (diffDays === 1) {
+            // Completed exactly the next calendar day → extend streak
+            newStreak = currentStreak + 1;
+          } else if (diffDays === 0) {
+            // Same day — streak stays as-is (already incremented today)
+            newStreak = currentStreak;
+          } else {
+            // Missed one or more days → streak resets to 1 (this completion starts a new one)
+            newStreak = 1;
+          }
+        } else {
+          // No previous streak day on record — this is the first ever completion
+          newStreak = 1;
+        }
+
+        const { error: profileUpdateErr } = await supabase
+          .from("profiles")
+          .update({
+            last_finished:   now.toISOString(),
+            prev_streak_day: now.toISOString(),
+            points:          currentPoints + chorePoints,
+            streaks:         newStreak,
+          })
+          .eq("id", user.id);
+
+        if (profileUpdateErr) {
+          console.error("[Chores] finish — profile update error:", profileUpdateErr);
+        } else {
+          console.log("[Chores] finish — profile updated:", {
+            pointsAdded: chorePoints,
+            newPoints:   currentPoints + chorePoints,
+            newStreak,
+          });
+        }
+      }
+
+      setSelectedChore(null);
+      await loadData();
+      await refreshProfileStats();
     }
   };
 
@@ -399,7 +420,6 @@ const reviveRecurringChoresForToday = useCallback(async (hid) => {
         roommates={roommates.map((r) => ({ id: r.id, name: r.name }))}
         onClose={() => setIsCreateOpen(false)}
         onCreate={async (payload) => {
-          console.log(payload);
           try {
             // ---- 0) Preconditions ----
             if (!resolvedHouseholdId) {
@@ -469,8 +489,6 @@ const reviveRecurringChoresForToday = useCallback(async (hid) => {
               return;
             }
 
-            console.log("[CreateChores] resolved assignees:", { rawAssignees, assignees });
-
             // ---- 3) Extract repeat_mask and points ------------------------------
             const repeat_mask =
               typeof payload?.repeatBitmask === "number" ? payload.repeatBitmask : 0;
@@ -493,7 +511,7 @@ const reviveRecurringChoresForToday = useCallback(async (hid) => {
               );
 
             if (beforeErr) {
-              console.warn("[CreateChores] Could not compute beforeCount for chore_assignments.", beforeErr);
+              console.warn("[CreateChores] Could not compute beforeCount.", beforeErr);
             }
 
             // ---- 5) Insert chore ------------------------------------------------
@@ -506,7 +524,7 @@ const reviveRecurringChoresForToday = useCallback(async (hid) => {
                 due_date,
                 status:      "ongoing",
                 repeat_mask,
-                points,
+                points: points?points:1,
               })
               .select("id")
               .single();
@@ -531,7 +549,7 @@ const reviveRecurringChoresForToday = useCallback(async (hid) => {
               return;
             }
 
-            // ---- 7) Verify table size changed (after) ----------------------------
+            // ---- 7) Verify -------------------------------------------------------
             const { count: afterCount, error: afterErr } = await supabase
               .from("chore_assignments")
               .select("chore_id", { count: "exact", head: true })
@@ -546,7 +564,7 @@ const reviveRecurringChoresForToday = useCallback(async (hid) => {
               );
 
             if (afterErr) {
-              console.warn("[CreateChores] Could not compute afterCount for chore_assignments.", afterErr);
+              console.warn("[CreateChores] Could not compute afterCount.", afterErr);
             }
 
             const { data: verifyRows, error: verifyErr } = await supabase
@@ -555,7 +573,7 @@ const reviveRecurringChoresForToday = useCallback(async (hid) => {
               .eq("chore_id", newChore.id);
 
             if (verifyErr) {
-              console.warn("[CreateChores] Could not verify inserted chore_assignments rows.", verifyErr);
+              console.warn("[CreateChores] Could not verify chore_assignments rows.", verifyErr);
             }
 
             const sizeChanged =
@@ -567,19 +585,14 @@ const reviveRecurringChoresForToday = useCallback(async (hid) => {
 
             if (sizeChanged || hasRowsForChore) {
               console.log("chores assignments is updated", {
-                beforeCount,
-                afterCount,
+                beforeCount, afterCount,
                 insertedForChore: verifyRows?.length ?? null,
-                chore_id:         newChore.id,
-                repeat_mask,
-                points,
+                chore_id: newChore.id,
+                repeat_mask, points,
               });
             } else {
-              console.warn("[CreateChores] Expected chore_assignments to change but did not detect it.", {
-                beforeCount,
-                afterCount,
-                verifyRows,
-                chore_id: newChore.id,
+              console.warn("[CreateChores] chore_assignments did not change as expected.", {
+                beforeCount, afterCount, verifyRows, chore_id: newChore.id,
               });
               return;
             }

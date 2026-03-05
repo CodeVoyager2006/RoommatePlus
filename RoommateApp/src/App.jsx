@@ -20,7 +20,7 @@ import Setting from "./Setting";
 /* =========================
    AUTHENTICATED APP LAYOUT
    ========================= */
-function AppLayout({ profile }) {
+function AppLayout({ profile, refreshProfile }) {
   // Manage the active tab in state instead of via React Router.
   // All tab components are always mounted — only their visibility changes.
   // This prevents React Router from unmounting/remounting them on every
@@ -49,7 +49,7 @@ function AppLayout({ profile }) {
           ? undefined
           : { visibility: "hidden", height: 0, overflow: "hidden" }}
       >
-        <Chores householdId={profile.household_id} />
+        <Chores householdId={profile.household_id} refreshProfile={refreshProfile} />
       </div>
 
       <div
@@ -253,7 +253,7 @@ export default function App() {
         path="/app"
         element={
           isAuthed && hasProfile && hasHouse ? (
-            <AppLayout profile={profile} />
+            <AppLayout profile={profile} refreshProfile={refreshProfile} />
           ) : isAuthed && hasProfile && !hasHouse ? (
             <Navigate to="/house-setup" replace />
           ) : (

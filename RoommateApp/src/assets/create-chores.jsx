@@ -222,13 +222,13 @@ export default function CreateChores({ isOpen, roommates = [], onCreate, onClose
 
           {/* Points */}
           <div className="cc-field">
-            <label className="cc-label">Points (optional)</label>
+            <label className="cc-label">Points</label>
             <input
               className={`cc-input cc-points-input ${errors.points ? "cc-input-error" : ""}`}
               type="number"
               min="0"
               step="1"
-              value={points?points:1}
+              value={points}
               onChange={(e) => setPoints(e.target.value)}
               placeholder="Default 1pt"
               aria-label="Points awarded for completing this chore"

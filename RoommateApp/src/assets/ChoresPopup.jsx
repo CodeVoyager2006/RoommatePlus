@@ -103,7 +103,10 @@ export default function ChoresPopup({ chore, onClose, onDelete }) {
           Description:
           <div className="chore-popup-description">{chore.description || "No description"}</div>
         </div>
-
+        <div className="chore-popup-row">
+          Points:
+          <div className="chore-popup-description">{chore.points || "Not provided"}</div>
+        </div>
         <div className="chore-popup-row">Assigned to: {assignedText}</div>
 
         {repeat && (
