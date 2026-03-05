@@ -218,6 +218,34 @@ export default function Chores({ householdId }) {
   }, [loadData]);
 
   // ── Abandon / finish ─────────────────────────────────────────────────────────
+
+  const uploadFinishProof = async (file, choreId) => {
+    if (!file) return null;
+
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${choreId}_${Date.now()}.${fileExt}`;
+    const filePath = `proofs/${fileName}`;
+
+    const { error } = await supabase.storage
+      .from("proves_of_finish")
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: file.type,
+      });
+
+    if (error) {
+      console.error("[Chores] upload proof error:", error);
+      throw error;
+    }
+
+    const { data } = supabase.storage
+      .from("proves_of_finish")
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  };
+
   const handleChoreAction = async (chore, meta) => {
     if (!chore?.id) return;
 
@@ -240,17 +268,25 @@ export default function Chores({ householdId }) {
     }
 
     if (meta?.mode === "finish") {
-      const updates = {
-        status:       "completed",
-        completed_at: new Date().toISOString(),
-      };
+    let imageUrl = null;
 
-      const { data, error } = await supabase
-        .from("chores")
-        .update(updates)
-        .eq("id", chore.id)
-        .select("id,status,completed_at")
-        .single();
+    // Upload proof image if provided
+    if (meta?.imageFile) {
+      imageUrl = await uploadFinishProof(meta.imageFile, chore.id);
+    }
+
+    const updates = {
+      status:       "completed",
+      completed_at: new Date().toISOString(),
+      image_url:    imageUrl,
+    };
+
+  const { data, error } = await supabase
+    .from("chores")
+    .update(updates)
+    .eq("id", chore.id)
+    .select("id,status,completed_at,image_url")
+    .single();
 
       console.log("[Chores] finish result:", { data, error });
       if (error) throw error;
