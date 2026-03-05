@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "./supabaseClient";
 
@@ -36,7 +36,7 @@ function AppLayout({ profile }) {
         <Route index element={<Chores householdId={profile.household_id} />} />
         <Route path="chat" element={<Chat />} />
         <Route path="machine" element={<Machine />} />
-        <Route path="setting" element={<Setting householdId={profile.household_id}/>} />
+        <Route path="setting" element={<Setting householdId={profile.household_id} />} />
         <Route path="*" element={<Navigate to="/app" replace />} />
       </Routes>
     </>
@@ -82,10 +82,8 @@ export default function App() {
   /* =========================
      LOAD PROFILE
      ========================= */
-  useEffect(() => {
-    let cancelled = false;
-
-    if (!session?.user) {
+  const loadProfile = useCallback(async (userId) => {
+    if (!userId) {
       setProfile(null);
       setProfileLoading(false);
       return;
@@ -93,36 +91,36 @@ export default function App() {
 
     setProfileLoading(true);
 
-    const loadProfile = async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("display_name, points, streaks, household_id")
-        .eq("id", session.user.id)
-        .single();
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("display_name, points, streaks, household_id")
+      .eq("id", userId)
+      .single();
 
-      if (cancelled) return;
+    if (!error && data) {
+      setProfile(data);
+    } else {
+      setProfile(null);
+    }
 
-      if (!error && data) {
-        setProfile(data);
-      } else {
-        setProfile(null);
-      }
+    setProfileLoading(false);
+  }, []);
 
-      setProfileLoading(false);
-    };
+  useEffect(() => {
+    loadProfile(session?.user?.id ?? null);
+  }, [session, loadProfile]);
 
-    loadProfile();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [session]);
+  // Passed to HouseCreate / HouseLogin so they can trigger a profile refresh
+  // immediately after the household_id is written — no page reload needed.
+  const refreshProfile = useCallback(() => {
+    if (session?.user?.id) loadProfile(session.user.id);
+  }, [session, loadProfile]);
 
   if (sessionLoading || profileLoading) return null;
 
-  const isAuthed = !!session?.user;
+  const isAuthed  = !!session?.user;
   const hasProfile = !!profile;
-  const hasHouse = !!profile?.household_id;
+  const hasHouse  = !!profile?.household_id;
 
   return (
     <Routes>
@@ -193,7 +191,7 @@ export default function App() {
         path="/house-create"
         element={
           isAuthed && hasProfile && !hasHouse ? (
-            <HouseCreate />
+            <HouseCreate onSuccess={refreshProfile} />
           ) : isAuthed && hasProfile && hasHouse ? (
             <Navigate to="/app" replace />
           ) : (
@@ -205,7 +203,7 @@ export default function App() {
         path="/house-login"
         element={
           isAuthed && hasProfile && !hasHouse ? (
-            <HouseLogin />
+            <HouseLogin onSuccess={refreshProfile} />
           ) : isAuthed && hasProfile && hasHouse ? (
             <Navigate to="/app" replace />
           ) : (

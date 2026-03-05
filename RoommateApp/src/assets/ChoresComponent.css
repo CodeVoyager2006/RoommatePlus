@@ -24,8 +24,9 @@
   display: flex;
   flex-wrap: wrap;
   gap: 18px;
+  flex-direction: column;
+  width: 100%;
 }
-
 /* ── Single widget card ──────────────────────────────────── */
 .chores-widget {
   background: var(--surface);
@@ -33,7 +34,6 @@
   border-radius: var(--r-lg);
   padding: 14px;
   width: 100%;
-  max-width: 360px;
   box-shadow: var(--shadow-sm);
 }
 
@@ -256,10 +256,12 @@
 .chore-action-small.danger { border-color: var(--danger-border); color: var(--danger); }
 .chore-action-small.danger:hover { background: var(--danger-light); }
 
+
+.repeat-row        { font-size: 0.78rem; color: var(--green-700, #2e6b2e); margin-top: 4px; }
+.chore-popup-repeat { font-size: 0.9rem; color: var(--green-700, #2e6b2e); }
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 740px) {
   .widgets-container { flex-direction: column; }
-  .chores-widget { max-width: 100%; }
   .chores-block { width: 72vw; max-width: 240px; }
 }
 @media (max-width: 420px) {

@@ -2,7 +2,7 @@ import { supabase } from "./supabaseClient";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 
-export default function HouseLogin() {
+export default function HouseLogin({onSuccess}) {
   const navigate = useNavigate();
   const [code, setCode] = useState("");
 
@@ -25,7 +25,7 @@ export default function HouseLogin() {
       .from("profiles")
       .update({ household_id: house.id })
       .eq("id", data.user.id);
-
+    await onSuccess?.();
     navigate("/app");
   }
 

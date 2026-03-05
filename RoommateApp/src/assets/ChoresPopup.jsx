@@ -6,26 +6,39 @@ import "./ChoresComponent.css";
  *
  * Props:
  * - chore: {
- *     id, title, dueDate, description, peopleAssigned, roommateName?, ...
+ *     id, title, dueDate, description, peopleAssigned,
+ *     repeatBitmask?, roommateName?, ...
  *   }
  * - onClose: () => void
  * - onDelete: (chore, meta) => Promise<void> | void
  *     meta:
  *      - { mode: "abandon", reason: string }
  *      - { mode: "finish", imageFile: File | null }
- *
- * Notes:
- * - "onDelete" is legacy naming from UI; it acts as an action handler.
- * - This component collects a reason/image and forwards them to the handler.
  */
+
+const DAY_ORDER    = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DAY_BIT      = { Mon: 64, Tue: 32, Wed: 16, Thu: 8, Fri: 4, Sat: 2, Sun: 1 };
+const WEEKDAY_MASK = 64 | 32 | 16 | 8 | 4;
+const WEEKEND_MASK = 2  | 1;
+const ALL_MASK     = 127;
+
+function repeatLabel(bitmask) {
+  if (!bitmask || bitmask === 0) return null;
+  if (bitmask === ALL_MASK)     return "Every day";
+  if (bitmask === WEEKDAY_MASK) return "Every weekday";
+  if (bitmask === WEEKEND_MASK) return "Weekend";
+  return DAY_ORDER.filter((d) => (bitmask & DAY_BIT[d]) !== 0).join(", ");
+}
+
 export default function ChoresPopup({ chore, onClose, onDelete }) {
   if (!chore) return null;
 
-  const [flow, setFlow] = useState(null); // null | "abandon" | "finish"
+  const [flow,          setFlow]          = useState(null); // null | "abandon" | "finish"
   const [abandonReason, setAbandonReason] = useState("");
-  const [finishImage, setFinishImage] = useState(null);
-  const [actionError, setActionError] = useState("");
-  const [isActing, setIsActing] = useState(false);
+  const [finishImage,   setFinishImage]   = useState(null);
+  const [actionError,   setActionError]   = useState("");
+  const [isActing,      setIsActing]      = useState(false);
+
   const canAct = useMemo(() => typeof onDelete === "function", [onDelete]);
 
   const formatDate = (d) => {
@@ -38,11 +51,10 @@ export default function ChoresPopup({ chore, onClose, onDelete }) {
     )}-${dt.getFullYear()}`;
   };
 
+  // ── Action handlers — each calls onDelete exactly once ───────────────────
+
   const submitAbandon = async () => {
-    if (!canAct) return;
-    await Promise.resolve(onDelete(chore, { mode: "abandon", reason: abandonReason }));
-    setFlow(null);
-    setAbandonReason("");
+    if (!canAct || isActing) return;
     setActionError("");
     setIsActing(true);
     try {
@@ -59,10 +71,7 @@ export default function ChoresPopup({ chore, onClose, onDelete }) {
   };
 
   const submitFinish = async () => {
-    if (!canAct) return;
-    await Promise.resolve(onDelete(chore, { mode: "finish", imageFile: finishImage }));
-    setFlow(null);
-    setFinishImage(null);
+    if (!canAct || isActing) return;
     setActionError("");
     setIsActing(true);
     try {
@@ -82,6 +91,8 @@ export default function ChoresPopup({ chore, onClose, onDelete }) {
     Array.isArray(chore.peopleAssigned) && chore.peopleAssigned.length > 0
       ? chore.peopleAssigned.join(", ")
       : "Unassigned";
+
+  const repeat = repeatLabel(chore.repeatBitmask);
 
   return (
     <div className="chore-popup-overlay" role="dialog" aria-modal="true" aria-label="Chore details">
@@ -105,13 +116,23 @@ export default function ChoresPopup({ chore, onClose, onDelete }) {
 
         <div className="chore-popup-row">Assigned to: {assignedText}</div>
 
+        {repeat && (
+          <div className="chore-popup-row">
+            Repeats: <span className="chore-popup-repeat">🔁 {repeat}</span>
+          </div>
+        )}
+
+        {actionError && (
+          <div className="chore-popup-error" role="alert">{actionError}</div>
+        )}
+
         {/* Actions */}
         <div className="chore-popup-actions" aria-label="Chore actions">
           <button
             type="button"
             className="chore-action-btn danger"
             onClick={() => setFlow("abandon")}
-            disabled={!canAct}
+            disabled={!canAct || isActing}
           >
             Abandon Chore
           </button>
@@ -119,7 +140,7 @@ export default function ChoresPopup({ chore, onClose, onDelete }) {
             type="button"
             className="chore-action-btn primary"
             onClick={() => setFlow("finish")}
-            disabled={!canAct}
+            disabled={!canAct || isActing}
           >
             Mark as finish
           </button>
@@ -143,16 +164,21 @@ export default function ChoresPopup({ chore, onClose, onDelete }) {
                 onChange={(e) => setAbandonReason(e.target.value)}
               />
               <div className="chore-action-buttons">
-                <button type="button" className="chore-action-small" onClick={() => setFlow(null)}>
+                <button
+                  type="button"
+                  className="chore-action-small"
+                  onClick={() => setFlow(null)}
+                  disabled={isActing}
+                >
                   Cancel
                 </button>
                 <button
                   type="button"
                   className="chore-action-small danger"
                   onClick={submitAbandon}
-                  disabled={!canAct}
+                  disabled={!canAct || isActing}
                 >
-                  Submit
+                  {isActing ? "Submitting…" : "Submit"}
                 </button>
               </div>
             </div>
@@ -178,16 +204,21 @@ export default function ChoresPopup({ chore, onClose, onDelete }) {
               />
               <div className="chore-action-hint">(Optional)</div>
               <div className="chore-action-buttons">
-                <button type="button" className="chore-action-small" onClick={() => setFlow(null)}>
+                <button
+                  type="button"
+                  className="chore-action-small"
+                  onClick={() => setFlow(null)}
+                  disabled={isActing}
+                >
                   Cancel
                 </button>
                 <button
                   type="button"
                   className="chore-action-small primary"
                   onClick={submitFinish}
-                  disabled={!canAct}
+                  disabled={!canAct || isActing}
                 >
-                  Submit
+                  {isActing ? "Submitting…" : "Submit"}
                 </button>
               </div>
             </div>
