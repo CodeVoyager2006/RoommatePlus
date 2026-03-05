@@ -21,6 +21,24 @@ export default function Chores({ householdId }) {
   // (e.g. after creating a chore or finishing one).
   const overdueChecked = useRef(false);
 
+  // ── hide chores completed/abandoned today ─────────────────────────────────────
+  // If completed_at OR abandoned_at is "today" (local day), do not show the chore.
+  const shouldHideChoreBecauseDoneToday = (chore) => {
+    const isToday = (ts) => {
+      if (!ts) return false;
+      const d = new Date(ts);
+      if (Number.isNaN(d.getTime())) return false;
+
+      const now = new Date();
+      return (
+        d.getFullYear() === now.getFullYear() &&
+        d.getMonth() === now.getMonth() &&
+        d.getDate() === now.getDate()
+      );
+    };
+
+    return isToday(chore.completed_at) || isToday(chore.abandoned_at);
+  };
   const loadData = useCallback(async () => {
     setLoading(true);
 
@@ -78,10 +96,11 @@ export default function Chores({ householdId }) {
     }));
     setRoommates(baseRoommates);
 
+    await reviveRecurringChoresForToday(hid);
     // Chores — include repeat_mask and points so they round-trip back to the UI
     const { data: chores, error: choresError } = await supabase
       .from("chores")
-      .select("id, name, due_date, description, household_id, status, repeat_mask, points")
+      .select("id, name, due_date, description, household_id, status, repeat_mask, points, completed_at, abandoned_at")
       .eq("household_id", hid)
       .eq("status", "ongoing");
 
@@ -90,7 +109,15 @@ export default function Chores({ householdId }) {
       return;
     }
 
-    const choreIds = chores.map((c) => c.id);
+    // Filter out chores that were completed or abandoned today
+    const visibleChores = chores.filter((c) => !shouldHideChoreBecauseDoneToday(c));
+
+    if (visibleChores.length === 0) {
+      setLoading(false);
+      return;
+    }
+
+    const choreIds = visibleChores.map((c) => c.id);
 
     // Assignments
     const { data: assignments, error: assignmentsError } = await supabase
@@ -114,7 +141,7 @@ export default function Chores({ householdId }) {
     // Collect chores as UI objects first — overdue check runs after
     const allChoresForUI = [];
 
-    for (const chore of chores) {
+    for (const chore of visibleChores) {
       const assignedProfileIds = safeAssignments
         .filter((a) => a.chore_id === chore.id)
         .map((a) => a.profile_id);
@@ -155,7 +182,50 @@ export default function Chores({ householdId }) {
       await markOverdueChores(allChoresForUI);
     }
   }, [safeHouseholdId]); // eslint-disable-line react-hooks/exhaustive-deps
+  // ── reviveRecurringChoresForToday ────────────────────────────────────────────
+// If today matches a chore's repeat_mask, ensure that chore is set to "ongoing".
+// Assumes repeat_mask is a bitmask where bit 0 = Sunday, 1 = Monday, ... 6 = Saturday
+const reviveRecurringChoresForToday = useCallback(async (hid) => {
+  if (!hid) return;
 
+  // JS: 0=Sunday .. 6=Saturday
+  const todayIdx = new Date().getDay();
+  const todayBit = 1 << todayIdx;
+
+  // Fetch non-ongoing chores that have some repeat_mask set
+  const { data: candidates, error } = await supabase
+    .from("chores")
+    .select("id, status, repeat_mask")
+    .eq("household_id", hid)
+    .neq("status", "ongoing")
+    .gt("repeat_mask", 0);
+
+  if (error) {
+    console.error("[Chores] reviveRecurringChoresForToday fetch error:", error);
+    return;
+  }
+
+  if (!candidates || candidates.length === 0) return;
+
+  // Filter to chores whose repeat_mask includes today
+  const toReviveIds = candidates
+    .filter((c) => (((c.repeat_mask ?? 0) & todayBit) !== 0))
+    .map((c) => c.id);
+
+  if (toReviveIds.length === 0) return;
+
+  // Update in bulk
+  const { error: updateError } = await supabase
+    .from("chores")
+    .update({
+      status: "ongoing",
+    })
+    .in("id", toReviveIds);
+
+    if (updateError) {
+      console.error("[Chores] reviveRecurringChoresForToday update error:", updateError);
+    }
+  }, []);
   // ── markOverdueChores ───────────────────────────────────────────────────────
   // Steps:
   //   1. Capture the current timestamp once.
@@ -201,9 +271,11 @@ export default function Chores({ householdId }) {
     // Step 3 — bulk update in one DB call rather than one per chore
     const { error } = await supabase
       .from("chores")
-      .update({ status: "passed", drop_reason: "passed due date" })
+      .update({ status: "passed", drop_reason: "passed due date",
+        abandoned_at:'now()'
+       })
       .in("id", overdueIds);
-
+    
     if (error) {
       console.error("[Chores] overdue bulk update error:", error);
       return;
@@ -245,16 +317,15 @@ export default function Chores({ householdId }) {
 
     return data.publicUrl;
   };
-
   const handleChoreAction = async (chore, meta) => {
     if (!chore?.id) return;
 
     if (meta?.mode === "abandon") {
       const reason = (meta?.reason || "").trim() || "N/A";
-
+      
       const { data, error } = await supabase
         .from("chores")
-        .update({ status: "passed", drop_reason: reason })
+        .update({ status: "passed", drop_reason: reason, abandoned_at:'now()' })
         .eq("id", chore.id)
         .select("id,status,drop_reason")
         .single();
