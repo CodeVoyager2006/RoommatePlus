@@ -64,12 +64,28 @@ export async function fetchThreadWithAuthor(threadId) {
   return { thread, authorName };
 }
 
-/** Create a new thread, optionally with a first message. */
-export async function createThread({ householdId, title, body, senderId }) {
+/**
+ * Create a new thread, optionally with a first message.
+ *
+ * @param {object} params
+ * @param {string} params.householdId  - UUID of the household
+ * @param {string} params.title        - Thread title
+ * @param {string|null} params.body    - Optional first message body
+ * @param {string} params.senderId     - UUID of the creating user
+ * @param {string|null} [params.chore_id] - Optional UUID of the linked chore
+ */
+export async function createThread({ householdId, title, body, senderId, chore_id = null }) {
+  // Build the insert payload — only include chore_id when it's actually provided
+  const insertPayload = {
+    household_id: householdId,
+    title: title.trim() || "Untitled",
+  };
+  if (chore_id) insertPayload.chore_id = chore_id;
+
   const { data: thread, error: tErr } = await supabase
     .from("threads")
-    .insert({ household_id: householdId, title: title.trim() || "Untitled" })
-    .select("id, title, summary, created_at")
+    .insert(insertPayload)
+    .select("id, title, summary, created_at, chore_id")
     .single();
   if (tErr) throw tErr;
 
