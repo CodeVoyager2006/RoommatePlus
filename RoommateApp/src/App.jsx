@@ -21,7 +21,6 @@ import Setting from "./Setting";
 const TABS = ["chores", "chat", "machine", "setting"];
 
 function getInitialTab() {
-  // Read tab from the URL hash, e.g. /app#chat → "chat"
   const hash = window.location.hash.replace("#", "");
   return TABS.includes(hash) ? hash : "chores";
 }
@@ -32,9 +31,6 @@ function getInitialTab() {
 function AppLayout({ profile, members, refreshProfile }) {
   const [activeTab, setActiveTab] = useState(getInitialTab);
 
-  // Keep the URL hash in sync with the active tab so the address bar
-  // reflects the current section (e.g. /app#chat) without triggering
-  // a full navigation / remount.
   useEffect(() => {
     window.history.replaceState(null, "", `#${activeTab}`);
   }, [activeTab]);
@@ -49,16 +45,12 @@ function AppLayout({ profile, members, refreshProfile }) {
 
       <MenuBar activeTab={activeTab} onTabChange={setActiveTab} />
 
-      {/*
-        All tabs stay mounted; only visibility toggles.
-        This prevents every tab from re-fetching data on every switch.
-      */}
       <div
         style={activeTab === "chores"
           ? undefined
           : { visibility: "hidden", height: 0, overflow: "hidden" }}
       >
-        <Chores householdId={profile.household_id} refreshProfile={refreshProfile} />
+        <Chores householdId={profile.household_id} />
       </div>
 
       <div
@@ -66,11 +58,6 @@ function AppLayout({ profile, members, refreshProfile }) {
           ? undefined
           : { visibility: "hidden", height: 0, overflow: "hidden" }}
       >
-        {/*
-          Pass the data already loaded in App so Chat never needs to
-          re-fetch the household or members from scratch.
-          currentUserId comes from profile.id (profiles.id = auth.users.id).
-        */}
         <Chat
           householdId={profile.household_id}
           currentUserId={profile.id}
@@ -84,7 +71,10 @@ function AppLayout({ profile, members, refreshProfile }) {
           ? undefined
           : { visibility: "hidden", height: 0, overflow: "hidden" }}
       >
-        <Machine />
+        <Machine
+          householdId={profile.household_id}
+          currentUserId={profile.id}
+        />
       </div>
 
       <div
@@ -106,12 +96,9 @@ export default function App() {
   const [profileLoading, setProfileLoading] = useState(true);
 
   const [session, setSession] = useState(null);
-  const [profile, setProfile] = useState(null);   // includes household_name
-  const [members, setMembers] = useState([]);      // pre-fetched for Chat
+  const [profile, setProfile] = useState(null);
+  const [members, setMembers] = useState([]);
 
-  /* =========================
-     SUPABASE AUTH CONNECTION
-     ========================= */
   useEffect(() => {
     let mounted = true;
 
@@ -135,9 +122,6 @@ export default function App() {
     };
   }, []);
 
-  /* =========================
-     LOAD PROFILE + HOUSEHOLD NAME + MEMBERS
-     ========================= */
   const loadProfile = useCallback(async (userId) => {
     if (!userId) {
       setProfile(null);
@@ -148,7 +132,6 @@ export default function App() {
 
     setProfileLoading(true);
 
-    // Fetch profile joined with household name in one query
     const { data, error } = await supabase
       .from("profiles")
       .select(`
@@ -169,7 +152,6 @@ export default function App() {
       };
       setProfile(enriched);
 
-      // Pre-fetch all members for the household so Chat can render immediately
       if (data.household_id) {
         const { data: mems } = await supabase
           .from("profiles")
@@ -277,9 +259,7 @@ export default function App() {
         }
       />
 
-      {/* Catch deep /app/* and redirect */}
       <Route path="/app/*" element={<Navigate to="/app" replace />} />
-
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
