@@ -1,14 +1,43 @@
 import React, { useEffect, useState } from "react";
 import Avatar from "./Avatar";
+import { supabase } from "../supabaseClient";
 import "./ThreadView.css";
 
 /* ─── Thread Info Detail View ────────────────────────────────────────────────
    Shown when the user taps ℹ from the message list.
-   Displays thread metadata + a "Relevant Files" placeholder.
+   Displays thread metadata + Relevant Files (chore image if thread is linked
+   to a chore, empty state otherwise).
    No message composer is shown here.
 ────────────────────────────────────────────────────────────────────────────── */
 function ThreadInfoView({ thread, messages, onBack, formatTime }) {
   const lastMsg = messages[messages.length - 1];
+
+  // Fetch the chore's image_url when this thread is linked to a chore
+  const [choreImageUrl, setChoreImageUrl] = useState(null);
+  const [loadingImage, setLoadingImage]   = useState(false);
+
+  useEffect(() => {
+    // Reset whenever the thread changes
+    setChoreImageUrl(null);
+
+    if (!thread?.chore_id) return;
+
+    let cancelled = false;
+    setLoadingImage(true);
+
+    supabase
+      .from("chores")
+      .select("image_url")
+      .eq("id", thread.chore_id)
+      .single()
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (!error && data?.image_url) setChoreImageUrl(data.image_url);
+        setLoadingImage(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [thread?.id, thread?.chore_id]);
 
   return (
     <div className="tv-wrap">
@@ -45,16 +74,37 @@ function ThreadInfoView({ thread, messages, onBack, formatTime }) {
         )}
       </div>
 
-      {/* Relevant Files — placeholder for future image/file attachments */}
+      {/* Relevant Files — shows chore image when thread is linked to a chore */}
       <div className="tv-files-section">
         <div className="tv-files-header">Relevant Files</div>
-        <div className="tv-files-empty">
-          <div className="tv-files-empty__icon" aria-hidden="true">🖼</div>
-          <div className="tv-files-empty__text">No files yet.</div>
-          <div className="tv-files-empty__sub">
-            Images and files related to this thread will appear here.
+
+        {loadingImage && (
+          <div className="tv-files-empty">
+            <div className="tv-files-empty__text">Loading…</div>
           </div>
-        </div>
+        )}
+
+        {!loadingImage && choreImageUrl && (
+          <div className="tv-files-grid">
+            <div className="tv-files-item">
+              <img
+                src={choreImageUrl}
+                alt="Chore image"
+                className="tv-files-img"
+              />
+            </div>
+          </div>
+        )}
+
+        {!loadingImage && !choreImageUrl && (
+          <div className="tv-files-empty">
+            <div className="tv-files-empty__icon" aria-hidden="true">🖼</div>
+            <div className="tv-files-empty__text">No files yet.</div>
+            <div className="tv-files-empty__sub">
+              Images and files related to this thread will appear here.
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -248,3 +248,8 @@
   max-width: 220px;
   line-height: 1.4;
 }
+
+img.tv-files-img {
+    height: 100%;
+    width: 100%;
+}

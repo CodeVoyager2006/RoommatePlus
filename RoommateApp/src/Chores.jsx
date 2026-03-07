@@ -4,6 +4,7 @@ import { supabase } from "./supabaseClient";
 import ChoresWidget from "./assets/ChoresWidget";
 import ChoresPopup from "./assets/ChoresPopup";
 import CreateChores from "./assets/create-chores";
+import { createThread, createMessage } from "./chatApi";
 import "./assets/ChoresComponent.css";
 
 export default function Chores({ householdId, refreshProfile }) {
@@ -20,8 +21,6 @@ export default function Chores({ householdId, refreshProfile }) {
   const overdueChecked = useRef(false);
 
   // ── Core fetch ──────────────────────────────────────────────────────────────
-  // `silent` — when true, skips setLoading(true) so the UI doesn't flash blank.
-  //            Used by the overdue check's second fetch.
   const loadData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
 
@@ -37,7 +36,6 @@ export default function Chores({ householdId, refreshProfile }) {
       return;
     }
 
-    // Resolve household
     let hid = safeHouseholdId;
 
     if (!hid) {
@@ -58,7 +56,6 @@ export default function Chores({ householdId, refreshProfile }) {
 
     setResolvedHouseholdId(hid);
 
-    // Profiles
     const { data: profiles, error: profilesError } = await supabase
       .from("profiles")
       .select("id, display_name, household_id")
@@ -71,15 +68,13 @@ export default function Chores({ householdId, refreshProfile }) {
       return;
     }
 
-    // Chores
     const { data: chores, error: choresError } = await supabase
       .from("chores")
-      .select("id, name, due_date, description, household_id, status, repeat_mask, points")
+      .select("id, name, due_date, description, household_id, status, repeat_mask, points, image_url")
       .eq("household_id", hid)
       .eq("status", "ongoing");
 
     if (choresError || !chores || chores.length === 0) {
-      // Still paint the empty roommate list
       setRoommates(
         profiles.map((p) => ({
           id: p.id,
@@ -93,7 +88,6 @@ export default function Chores({ householdId, refreshProfile }) {
 
     const choreIds = chores.map((c) => c.id);
 
-    // Assignments
     const { data: assignments, error: assignmentsError } = await supabase
       .from("chore_assignments")
       .select("chore_id, profile_id")
@@ -112,7 +106,6 @@ export default function Chores({ householdId, refreshProfile }) {
     }));
     const idxByProfileId = new Map(updated.map((r, idx) => [r.id, idx]));
 
-    // Build UI objects and collect them for the overdue check
     const allChoresForUI = [];
 
     for (const chore of chores) {
@@ -135,6 +128,7 @@ export default function Chores({ householdId, refreshProfile }) {
         repeatDays:    [],
         repeatBitmask: chore.repeat_mask ?? 0,
         points:        chore.points ?? null,
+        imageUrl:      chore.image_url ?? null,
       };
 
       allChoresForUI.push(choreForUI);
@@ -148,27 +142,20 @@ export default function Chores({ householdId, refreshProfile }) {
     setRoommates(updated);
     setLoading(false);
 
-    // ── Overdue check — runs once per mount only ──────────────────────────
     if (!overdueChecked.current) {
       overdueChecked.current = true;
-      // Run inline here (not via a separate useCallback) to avoid the
-      // circular dependency: markOverdueChores → loadData → markOverdueChores
       await runOverdueCheck(allChoresForUI);
     }
-  }, [safeHouseholdId]); // only re-create when household changes
+  }, [safeHouseholdId]);
 
   // ── runOverdueCheck ─────────────────────────────────────────────────────────
-  // Defined as a plain async function inside the component so it closes over
-  // `loadData` without creating a useCallback circular dependency.
-  // Called only from within loadData, so it's always in scope.
+  // Auto-marks passed-due chores and creates a "Missed deadline" thread for each.
   async function runOverdueCheck(choresForUI) {
-    // Today at UTC midnight — chores due today are still "ongoing"
     const now = new Date();
     const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
 
-    // Deduplicate (same chore can appear under multiple roommates)
     const seen = new Set();
-    const overdueIds = [];
+    const overdueChores = [];
 
     for (const chore of choresForUI) {
       if (seen.has(chore.id)) continue;
@@ -179,12 +166,12 @@ export default function Chores({ householdId, refreshProfile }) {
       const d = new Date(chore.dueDate);
       const dueUTC = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 
-      // Strictly before today → overdue
-      if (dueUTC < todayUTC) overdueIds.push(chore.id);
+      if (dueUTC < todayUTC) overdueChores.push(chore);
     }
 
-    if (overdueIds.length === 0) return;
+    if (overdueChores.length === 0) return;
 
+    const overdueIds = overdueChores.map((c) => c.id);
     console.log(`[Chores] marking ${overdueIds.length} overdue chore(s) as passed:`, overdueIds);
 
     const { error } = await supabase
@@ -197,7 +184,26 @@ export default function Chores({ householdId, refreshProfile }) {
       return;
     }
 
-    // Silent refresh — don't show the loading spinner for this background update
+    // Get current user to use as thread sender
+    const { data: { user } } = await supabase.auth.getUser();
+    const hid = resolvedHouseholdId ?? safeHouseholdId;
+
+    if (user && hid) {
+      for (const chore of overdueChores) {
+        try {
+          await createThread({
+            householdId: hid,
+            title: `Missed deadline for: ${chore.title}`,
+            body: null,
+            chore_id:chore.id,
+            senderId: user.id,
+          });
+        } catch (e) {
+          console.error("[Chores] failed to create missed-deadline thread:", e);
+        }
+      }
+    }
+
     await loadData(true);
   }
 
@@ -206,19 +212,13 @@ export default function Chores({ householdId, refreshProfile }) {
   }, [loadData]);
 
   // ── refreshProfileStats ─────────────────────────────────────────────────────
-  // Fetches the latest points + streaks for the current user from Supabase
-  // and calls the refreshProfile callback so App.jsx re-renders the Header
-  // with up-to-date values.  Safe to call after any chore action.
   const refreshProfileStats = async () => {
     const {
       data: { user },
       error: userErr,
     } = await supabase.auth.getUser();
 
-    if (userErr || !user) {
-      console.warn("[Chores] refreshProfileStats — could not get user:", userErr);
-      return;
-    }
+    if (userErr || !user) return;
 
     const { data: profile, error: profileErr } = await supabase
       .from("profiles")
@@ -226,27 +226,30 @@ export default function Chores({ householdId, refreshProfile }) {
       .eq("id", user.id)
       .single();
 
-    if (profileErr) {
-      console.warn("[Chores] refreshProfileStats — profile fetch error:", profileErr);
-      return;
-    }
+    if (profileErr) return;
 
-    console.log("[Chores] refreshProfileStats →", { points: profile.points, streaks: profile.streaks });
-
-    // Propagate the fresh values up to App.jsx so Header re-renders
     refreshProfile?.();
   };
 
-  // ── Abandon / finish ─────────────────────────────────────────────────────────
+  // ── handleChoreAction ───────────────────────────────────────────────────────
   const handleChoreAction = async (chore, meta) => {
     if (!chore?.id) return;
 
-    // Get the current user once — needed by both branches for profile updates
     const {
       data: { user },
       error: userErr,
     } = await supabase.auth.getUser();
     if (userErr || !user) throw new Error("Could not resolve current user.");
+
+    // Fetch the user's display_name for thread titles
+    const { data: actorProfile } = await supabase
+      .from("profiles")
+      .select("display_name, points, streaks")
+      .eq("id", user.id)
+      .single();
+
+    const actorName = actorProfile?.display_name || "Someone";
+    const hid = resolvedHouseholdId ?? safeHouseholdId;
 
     // ── Abandon ────────────────────────────────────────────────────────────────
     if (meta?.mode === "abandon") {
@@ -263,37 +266,41 @@ export default function Chores({ householdId, refreshProfile }) {
       console.log("[Chores] abandon result:", { data: choreData, error: choreErr });
       if (choreErr) throw choreErr;
 
-      // 2) Fetch current profile so we can safely decrement points
-      const { data: profile, error: profileFetchErr } = await supabase
-        .from("profiles")
-        .select("points, streaks")
-        .eq("id", user.id)
-        .single();
-
-      if (profileFetchErr) {
-        console.error("[Chores] abandon — could not fetch profile:", profileFetchErr);
-      } else {
-        const chorePoints  = typeof chore.points === "number" ? chore.points : 0;
-        const currentPoints = typeof profile.points  === "number" ? profile.points  : 0;
+      // 2) Deduct points + reset streak
+      if (actorProfile) {
+        const chorePoints   = typeof chore.points === "number" ? chore.points : 0;
+        const currentPoints = typeof actorProfile.points === "number" ? actorProfile.points : 0;
 
         const { error: profileUpdateErr } = await supabase
           .from("profiles")
           .update({
-            // Deduct points (floor at 0 so it never goes negative)
             points:  Math.max(0, currentPoints - chorePoints),
-            // Reset streak to 0 on abandon
             streaks: 0,
           })
           .eq("id", user.id);
 
         if (profileUpdateErr) {
           console.error("[Chores] abandon — profile update error:", profileUpdateErr);
-        } else {
-          console.log("[Chores] abandon — profile updated:", {
-            pointsDeducted: chorePoints,
-            newPoints: Math.max(0, currentPoints - chorePoints),
-            streaksReset: true,
+        }
+      }
+
+      // 3) Create a thread for this abandon action
+      if (hid) {
+        try {
+          const threadTitle = `${actorName} abandons the chore: ${chore.title}`;
+          // Only post the reason as a first message if the user provided one
+          // (not "N/A", which is our default when no reason was given)
+          const hasRealReason = meta?.reason?.trim();
+
+          await createThread({
+            householdId: hid,
+            title: threadTitle,
+            chore_id:chore.id,
+            body: hasRealReason ? hasRealReason : null,
+            senderId: user.id,
           });
+        } catch (e) {
+          console.error("[Chores] failed to create abandon thread:", e);
         }
       }
 
@@ -307,57 +314,88 @@ export default function Chores({ householdId, refreshProfile }) {
     if (meta?.mode === "finish") {
       const now = new Date();
 
-      // 1) Mark chore as completed
+      // 1a) Upload proof-of-finish image to Storage (if the user attached one).
+      //     ChoresPopup passes the raw File object as meta.imageFile.
+      //     Bucket : proves_of_finish
+      //     Path   : proof/{choreId}/{timestamp}.{ext}
+      //       - segment 1 "proof"   matched by RLS: split_part(name,'/',1) = 'proof'
+      //       - segment 2 {choreId} cast to ::uuid: split_part(name,'/',2)::uuid
+      //       - segment 3 filename  not checked by RLS
+      let uploadedImageUrl = null;
+
+      if (meta?.imageFile instanceof File) {
+        try {
+          const file        = meta.imageFile;
+          const ext         = file.name.split(".").pop() || "jpg";
+          const storagePath = `proof/${chore.id}/${now.getTime()}.${ext}`;
+
+          console.log("[Chores] uploading proof image ->", storagePath);
+
+          const { data: uploadData, error: uploadErr } = await supabase.storage
+            .from("proves_of_finish")
+            .upload(storagePath, file, { upsert: true, contentType: file.type });
+
+          if (uploadErr) {
+            console.error("[Chores] proof image upload error:", {
+              message:    uploadErr.message,
+              statusCode: uploadErr.statusCode,
+              error:      uploadErr.error,
+              storagePath,
+              choreId:    chore.id,
+            });
+          } else {
+            console.log("[Chores] upload succeeded:", uploadData);
+            const { data: urlData } = supabase.storage
+              .from("proves_of_finish")
+              .getPublicUrl(storagePath);
+
+            uploadedImageUrl = urlData?.publicUrl ?? null;
+            console.log("[Chores] proof image public URL:", uploadedImageUrl);
+          }
+        } catch (e) {
+          console.error("[Chores] proof image upload exception:", e);
+        }
+      }
+
+      // 1b) Mark chore as completed and persist the proof image URL.
+      //     Prefer the freshly uploaded URL; fall back to any pre-existing imageUrl.
+      const finishPayload = {
+        status:       "completed",
+        completed_at: now.toISOString(),
+      };
+      const resolvedImageUrl = uploadedImageUrl ?? chore.imageUrl ?? null;
+      if (resolvedImageUrl) finishPayload.image_url = resolvedImageUrl;
+
       const { data: choreData, error: choreErr } = await supabase
         .from("chores")
-        .update({ status: "completed", completed_at: now.toISOString() })
+        .update(finishPayload)
         .eq("id", chore.id)
-        .select("id, status, completed_at")
+        .select("id, status, completed_at, image_url")
         .single();
 
       console.log("[Chores] finish result:", { data: choreData, error: choreErr });
       if (choreErr) throw choreErr;
 
-      // 2) Fetch current profile fields needed for streak + points logic
-      const { data: profile, error: profileFetchErr } = await supabase
-        .from("profiles")
-        .select("points, streaks, prev_streak_day")
-        .eq("id", user.id)
-        .single();
-
-      if (profileFetchErr) {
-        console.error("[Chores] finish — could not fetch profile:", profileFetchErr);
-      } else {
+      // 2) Update points + streak
+      if (actorProfile) {
         const chorePoints   = typeof chore.points === "number" ? chore.points : 0;
-        const currentPoints = typeof profile.points  === "number" ? profile.points  : 0;
-        const currentStreak = typeof profile.streaks === "number" ? profile.streaks : 0;
+        const currentPoints = typeof actorProfile.points === "number" ? actorProfile.points : 0;
+        const currentStreak = typeof actorProfile.streaks === "number" ? actorProfile.streaks : 0;
 
-        // ── Streak logic ──────────────────────────────────────────────────────
-        // Increment streak by 1 if and only if today is exactly 1 calendar day
-        // after prev_streak_day (consecutive days rule).
         let newStreak = currentStreak;
 
-        if (profile.prev_streak_day) {
-          const prev = new Date(profile.prev_streak_day);
-          // Normalise both dates to local midnight for a clean day-diff
+        if (actorProfile.prev_streak_day) {
+          const prev = new Date(actorProfile.prev_streak_day);
           const prevMidnight = new Date(prev.getFullYear(), prev.getMonth(), prev.getDate());
           const nowMidnight  = new Date(now.getFullYear(),  now.getMonth(),  now.getDate());
           const diffDays = Math.round(
             (nowMidnight.getTime() - prevMidnight.getTime()) / (1000 * 60 * 60 * 24)
           );
 
-          if (diffDays === 1) {
-            // Completed exactly the next calendar day → extend streak
-            newStreak = currentStreak + 1;
-          } else if (diffDays === 0) {
-            // Same day — streak stays as-is (already incremented today)
-            newStreak = currentStreak;
-          } else {
-            // Missed one or more days → streak resets to 1 (this completion starts a new one)
-            newStreak = 1;
-          }
+          if (diffDays === 1)      newStreak = currentStreak + 1;
+          else if (diffDays === 0) newStreak = currentStreak;
+          else                     newStreak = 1;
         } else {
-          // No previous streak day on record — this is the first ever completion
           newStreak = 1;
         }
 
@@ -373,12 +411,21 @@ export default function Chores({ householdId, refreshProfile }) {
 
         if (profileUpdateErr) {
           console.error("[Chores] finish — profile update error:", profileUpdateErr);
-        } else {
-          console.log("[Chores] finish — profile updated:", {
-            pointsAdded: chorePoints,
-            newPoints:   currentPoints + chorePoints,
-            newStreak,
+        }
+      }
+
+      // 3) Create a thread for this finish action
+      if (hid) {
+        try {
+          await createThread({
+            householdId: hid,
+            title: `${actorName} marks as finish for chore: ${chore.title}`,
+            body: null,
+            chore_id:chore.id,
+            senderId: user.id,
           });
+        } catch (e) {
+          console.error("[Chores] failed to create finish thread:", e);
         }
       }
 
@@ -421,7 +468,6 @@ export default function Chores({ householdId, refreshProfile }) {
         onClose={() => setIsCreateOpen(false)}
         onCreate={async (payload) => {
           try {
-            // ---- 0) Preconditions ----
             if (!resolvedHouseholdId) {
               console.error("[CreateChores] No resolvedHouseholdId; cannot create chore.", {
                 resolvedHouseholdId,
@@ -429,7 +475,6 @@ export default function Chores({ householdId, refreshProfile }) {
               return;
             }
 
-            // ---- 1) Normalize scalar inputs ----
             const name        = (payload?.name ?? payload?.title ?? "").trim();
             const description = (payload?.description ?? "").trim() || null;
             const due_date    = payload?.due_date ?? payload?.dueDate ?? null;
@@ -439,7 +484,6 @@ export default function Chores({ householdId, refreshProfile }) {
               return;
             }
 
-            // ---- 2) Resolve assignees → UUIDs via profiles table -----------------
             const rawAssignees = payload.peopleAssigned;
 
             if (!Array.isArray(rawAssignees) || rawAssignees.length === 0) {
@@ -489,14 +533,12 @@ export default function Chores({ householdId, refreshProfile }) {
               return;
             }
 
-            // ---- 3) Extract repeat_mask and points ------------------------------
             const repeat_mask =
               typeof payload?.repeatBitmask === "number" ? payload.repeatBitmask : 0;
 
             const points =
               typeof payload?.points === "number" ? payload.points : null;
 
-            // ---- 4) Snapshot assignment count (before) ---------------------------
             const { count: beforeCount, error: beforeErr } = await supabase
               .from("chore_assignments")
               .select("chore_id", { count: "exact", head: true })
@@ -514,7 +556,6 @@ export default function Chores({ householdId, refreshProfile }) {
               console.warn("[CreateChores] Could not compute beforeCount.", beforeErr);
             }
 
-            // ---- 5) Insert chore ------------------------------------------------
             const { data: newChore, error: choreErr } = await supabase
               .from("chores")
               .insert({
@@ -524,7 +565,7 @@ export default function Chores({ householdId, refreshProfile }) {
                 due_date,
                 status:      "ongoing",
                 repeat_mask,
-                points: points?points:1,
+                points: points ? points : 1,
               })
               .select("id")
               .single();
@@ -534,7 +575,6 @@ export default function Chores({ householdId, refreshProfile }) {
               return;
             }
 
-            // ---- 6) Insert chore_assignments ------------------------------------
             const rows = assignees.map((profile_id) => ({
               chore_id:   newChore.id,
               profile_id,
@@ -549,7 +589,6 @@ export default function Chores({ householdId, refreshProfile }) {
               return;
             }
 
-            // ---- 7) Verify -------------------------------------------------------
             const { count: afterCount, error: afterErr } = await supabase
               .from("chore_assignments")
               .select("chore_id", { count: "exact", head: true })
@@ -597,7 +636,6 @@ export default function Chores({ householdId, refreshProfile }) {
               return;
             }
 
-            // ---- 8) Close + refresh ---------------------------------------------
             setIsCreateOpen(false);
             await loadData();
 
