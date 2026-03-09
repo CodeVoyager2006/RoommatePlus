@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.93.3",
+    "@vercel/analytics": "^1.6.1",
     "baseline-browser-mapping": "^2.9.19",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
