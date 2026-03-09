@@ -3,15 +3,19 @@ import "./AddMachine.css";
 
 export default function AddMachine({ open, onClose, onSave }) {
   const [name, setName] = useState("");
-  const [image, setImage] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const fileRef = useRef(null);
+  const cameraRef = useRef(null);
 
   if (!open) return null;
 
   const reset = () => {
     setName("");
-    setImage(null);
+    setImageFile(null);
+    setPreviewUrl(null);
     if (fileRef.current) fileRef.current.value = "";
+    if (cameraRef.current) cameraRef.current.value = "";
   };
 
   const handleClose = () => {
@@ -19,22 +23,17 @@ export default function AddMachine({ open, onClose, onSave }) {
     onClose();
   };
 
-  const handlePick = () => {
-    fileRef.current?.click();
-  };
-
   const handleFile = (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    const reader = new FileReader();
-    reader.onload = () => setImage(String(reader.result || ""));
-    reader.readAsDataURL(f);
+    setImageFile(f);
+    setPreviewUrl(URL.createObjectURL(f));
   };
 
   const handleSave = () => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    onSave({ name: trimmed, image });
+    onSave({ name: trimmed, imageFile });
     reset();
   };
 
@@ -54,21 +53,49 @@ export default function AddMachine({ open, onClose, onSave }) {
           placeholder="e.g., Washer"
         />
 
-        <div className="am-upload" onClick={handlePick} role="button" tabIndex={0}>
-          <div className="am-upload-text">Upload image of the machine</div>
+        {/* Upload from gallery */}
+        <div className="am-upload" onClick={() => fileRef.current?.click()} role="button" tabIndex={0}>
+          <div className="am-upload-text">📁 Upload image from gallery</div>
           <div className="am-upload-preview">
-            {image ? (
-              <img src={image} alt="Machine preview" />
+            {previewUrl ? (
+              <img src={previewUrl} alt="Machine preview" />
             ) : (
               <div className="am-upload-icon" aria-hidden="true" />
             )}
           </div>
         </div>
 
+        {/* Take a photo */}
+        <div
+          className="am-upload"
+          style={{ marginTop: 8 }}
+          onClick={() => cameraRef.current?.click()}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="am-upload-text">📷 Take a photo</div>
+          <div className="am-upload-preview">
+            {previewUrl ? (
+              <img src={previewUrl} alt="Machine preview" />
+            ) : (
+              <div className="am-upload-icon" aria-hidden="true" />
+            )}
+          </div>
+        </div>
+
+        {/* Hidden file inputs */}
         <input
           ref={fileRef}
           type="file"
           accept="image/*"
+          onChange={handleFile}
+          style={{ display: "none" }}
+        />
+        <input
+          ref={cameraRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
           onChange={handleFile}
           style={{ display: "none" }}
         />

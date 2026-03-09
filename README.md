@@ -1,4 +1,4 @@
-# Roommate+
+# Roommate+ (© 2026 Roommates+. All rights reserved.)
 [Vercel Link](https://roommate-plus.vercel.app?_vercel_share=bm9iT6dWEc2qyJpFcV5zUsYkZyu8gREK)
 ## Project Goal
 This project aims to provide assistant to help housing units with multiple roommates manage their shared responsibilities and provide mean to communicate and resolve problems in regards to common roommates problem directly through app

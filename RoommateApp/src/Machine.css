@@ -57,6 +57,17 @@
   z-index: 70;
 }
 
+/* Empty / loading states */
+.machine-loading,
+.machine-empty {
+  text-align: center;
+  margin-top: 60px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
 @media (max-width: 420px) {
   .machine-page { padding-left: 12px; padding-right: 12px; }
   .machine-grid { gap: 12px; }

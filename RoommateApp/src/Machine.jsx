@@ -1,30 +1,13 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import MachineWidget from "./assets/MachineWidget";
 import MachineInfo from "./assets/MachineInfo";
 import AddMachine from "./assets/AddMachine";
+import { supabase } from "./supabaseClient";
 import "./Machine.css";
 
-const CURRENT_USER = "You";
-
-const seedMachines = [
-  {
-    id: "m1",
-    name: "Machine #1",
-    image: null,
-    status: "available",
-    occupiedBy: "",
-  },
-  {
-    id: "m2",
-    name: "Machine #2",
-    image: null,
-    status: "busy",
-    occupiedBy: "Alex",
-  },
-];
-
-export default function Machine() {
-  const [machines, setMachines] = useState(seedMachines);
+export default function Machine({ householdId, currentUserId }) {
+  const [machines, setMachines] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [selectedId, setSelectedId] = useState(null);
   const selectedMachine = useMemo(
@@ -45,6 +28,55 @@ export default function Machine() {
     }, 2400);
   };
 
+  /* ── Fetch machines ── */
+  const fetchMachines = useCallback(async () => {
+    if (!householdId) return;
+    const { data, error } = await supabase
+      .from("machines")
+      .select("id, name, image_url, occupied_by, profiles:occupied_by(display_name)")
+      .eq("household_id", householdId)
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setMachines(
+        data.map((m) => ({
+          id: m.id,
+          name: m.name,
+          image: m.image_url || null,
+          status: m.occupied_by ? "busy" : "available",
+          occupiedBy: m.profiles?.display_name || null,
+          occupiedById: m.occupied_by || null,
+        }))
+      );
+    }
+    setLoading(false);
+  }, [householdId]);
+
+  useEffect(() => {
+    fetchMachines();
+  }, [fetchMachines]);
+
+  /* ── Real-time subscription ── */
+  useEffect(() => {
+    if (!householdId) return;
+    const channel = supabase
+      .channel(`machines:household:${householdId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "machines",
+          filter: `household_id=eq.${householdId}`,
+        },
+        () => fetchMachines()
+      )
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, [householdId, fetchMachines]);
+
+  /* ── Modals ── */
   const onOpenInfo = (id) => {
     setSelectedId(id);
     setIsInfoOpen(true);
@@ -55,66 +87,101 @@ export default function Machine() {
     setSelectedId(null);
   };
 
-  const addMachine = ({ name, image }) => {
-    const newMachine = {
-      id: `m_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+  /* ── Add machine ── */
+  const addMachine = async ({ name, imageFile }) => {
+    let image_url = null;
+
+    if (imageFile) {
+      const ext = imageFile.name.split(".").pop();
+      const path = `${householdId}/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("machine")
+        .upload(path, imageFile, { upsert: false });
+
+      if (!uploadError) {
+        const { data: urlData } = supabase.storage
+          .from("machine")
+          .getPublicUrl(path);
+        image_url = urlData?.publicUrl || null;
+      }
+    }
+
+    const { error } = await supabase.from("machines").insert({
+      household_id: householdId,
       name: name.trim(),
-      image: image || null,
-      status: "available",
-      occupiedBy: "",
-    };
-    setMachines((prev) => [newMachine, ...prev]);
-    setIsAddOpen(false);
-    openToast("Machine added.");
+      image_url,
+      occupied_by: null,
+    });
+
+    if (!error) {
+      setIsAddOpen(false);
+      openToast("Machine added.");
+      fetchMachines();
+    } else {
+      openToast("Failed to add machine.");
+    }
   };
 
-  const requestOccupy = (id) => {
+  /* ── Occupy ── */
+  const requestOccupy = async (id) => {
     const m = machines.find((x) => x.id === id);
     if (!m) return;
 
     if (m.status === "busy") {
-      openToast("Machine is currently being used please come back later");
+      openToast("Machine is currently being used, please come back later.");
       return;
     }
 
-    setMachines((prev) =>
-      prev.map((mm) =>
-        mm.id === id ? { ...mm, status: "busy", occupiedBy: CURRENT_USER } : mm
-      )
-    );
+    const { error } = await supabase
+      .from("machines")
+      .update({ occupied_by: currentUserId })
+      .eq("id", id);
 
     onCloseInfo();
-    openToast("Machine occupied.");
+    if (!error) {
+      openToast("Machine occupied.");
+      fetchMachines();
+    } else {
+      openToast("Failed to occupy machine.");
+    }
   };
 
-  // NEW: free/finish feature
-  const requestFinish = (id) => {
+  /* ── Finish ── */
+  const requestFinish = async (id) => {
     const m = machines.find((x) => x.id === id);
-    if (!m) return;
+    if (!m || !(m.status === "busy" && m.occupiedById === currentUserId)) return;
 
-    // Only allow finishing if current user is the occupier
-    if (!(m.status === "busy" && m.occupiedBy === CURRENT_USER)) return;
-
-    setMachines((prev) =>
-      prev.map((mm) =>
-        mm.id === id ? { ...mm, status: "available", occupiedBy: "" } : mm
-      )
-    );
+    const { error } = await supabase
+      .from("machines")
+      .update({ occupied_by: null })
+      .eq("id", id);
 
     onCloseInfo();
-    openToast("Machine freed.");
+    if (!error) {
+      openToast("Machine freed.");
+      fetchMachines();
+    } else {
+      openToast("Failed to free machine.");
+    }
   };
 
   const canFinish =
-    selectedMachine?.status === "busy" && selectedMachine?.occupiedBy === CURRENT_USER;
+    selectedMachine?.status === "busy" &&
+    selectedMachine?.occupiedById === currentUserId;
 
   return (
     <div className="machine-page">
-      <div className="machine-grid">
-        {machines.map((m) => (
-          <MachineWidget key={m.id} machine={m} onClick={() => onOpenInfo(m.id)} />
-        ))}
-      </div>
+      {loading ? (
+        <div className="machine-loading">Loading machines…</div>
+      ) : machines.length === 0 ? (
+        <div className="machine-empty">No machines yet. Add one!</div>
+      ) : (
+        <div className="machine-grid">
+          {machines.map((m) => (
+            <MachineWidget key={m.id} machine={m} onClick={() => onOpenInfo(m.id)} />
+          ))}
+        </div>
+      )}
 
       <button
         className="machine-fab"
