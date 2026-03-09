@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "./supabaseClient";
+import { Analytics } from "@vercel/analytics/next"
 
 import Header from "./assets/Header";
 import MenuBar from "./assets/MenuBar";
@@ -37,6 +38,7 @@ function AppLayout({ profile, members, refreshProfile }) {
 
   return (
     <>
+      <Analytics />
       <Header
         displayName={profile.display_name}
         points={profile.points}
