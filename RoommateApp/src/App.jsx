@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "./supabaseClient";
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from "@vercel/analytics/react"
 
 import Header from "./assets/Header";
 import MenuBar from "./assets/MenuBar";
