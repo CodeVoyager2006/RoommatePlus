@@ -18,14 +18,18 @@
 }
 
 .history-button {
+  position: fixed;
+  top: calc(var(--app-header-height) + 16px);
+  right: 20px;
   background: var(--primary);
   color: var(--white);
   border: none;
   border-radius: var(--r-md);
-  padding: 8px 12px;
+  padding: 8px 14px;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
+  z-index: 1400;
 }
 
 .history-button:hover {
