@@ -1,0 +1,232 @@
+/* Modal Overlay - Darkens background */
+.chores-history-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+/* Modal Container */
+.chores-history-modal {
+  position: relative;
+  background: #f0f0f0;
+  border-radius: 16px;
+  width: 90vw;
+  max-width: 600px;
+  max-height: 85vh;
+  padding: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Header Section */
+.chores-history-modal h2 {
+  margin: 0;
+  padding: 24px 20px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #2b2b2b;
+  background: #f0f0f0;
+  border-bottom: 1px solid #d0d0d0;
+}
+
+/* Close Button */
+.history-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #ff5757;
+  color: white;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.history-close:hover {
+  background: #e64545;
+  transform: scale(1.05);
+}
+
+.history-close:active {
+  transform: scale(0.95);
+}
+
+/* Filter Section */
+.filters-container {
+  background: #c8e6c9;
+  padding: 20px;
+  border-bottom: 1px solid #a5d6a7;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.filters-container label {
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2b2b2b;
+  gap: 8px;
+}
+
+.filters-container select {
+  flex: 1;
+  padding: 8px 12px;
+  border: 2px solid #81c784;
+  border-radius: 8px;
+  background: white;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #2b2b2b;
+}
+
+.filters-container select:focus {
+  outline: none;
+  border-color: #66bb6a;
+}
+
+/* Results Header */
+.history-results {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  background: #f0f0f0;
+}
+
+.history-results > p {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #2b2b2b;
+}
+
+/* Table Styling */
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.history-table thead {
+  background: #c8e6c9;
+}
+
+.history-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 700;
+  color: #2b2b2b;
+  border-bottom: 2px solid #a5d6a7;
+}
+
+.history-table tbody tr {
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.history-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.history-table tbody tr:hover {
+  background: #f5f5f5;
+}
+
+.history-table td {
+  padding: 14px 16px;
+  font-size: 14px;
+  color: #2b2b2b;
+}
+
+/* User column (green text) */
+.history-table td:first-child {
+  color: #6fa86f;
+  font-weight: 600;
+}
+
+/* Points column (green text) */
+.history-table td:last-child {
+  color: #6fa86f;
+  font-weight: 600;
+}
+
+/* Empty State */
+.history-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6b6b6b;
+  font-size: 15px;
+}
+
+/* Loading State */
+.history-loading {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6b6b6b;
+  font-size: 15px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 600px) {
+  .chores-history-modal {
+    width: 95vw;
+    max-height: 90vh;
+  }
+
+  .chores-history-modal h2 {
+    font-size: 24px;
+    padding: 20px 16px;
+  }
+
+  .filters-container {
+    padding: 16px;
+  }
+
+  .history-table th,
+  .history-table td {
+    padding: 10px 8px;
+    font-size: 13px;
+  }
+
+  /* Stack table on mobile */
+  .history-table {
+    font-size: 12px;
+  }
+}
+
+/* Scrollbar Styling */
+.history-results::-webkit-scrollbar {
+  width: 8px;
+}
+
+.history-results::-webkit-scrollbar-track {
+  background: #f0f0f0;
+}
+
+.history-results::-webkit-scrollbar-thumb {
+  background: #c8e6c9;
+  border-radius: 4px;
+}
+
+.history-results::-webkit-scrollbar-thumb:hover {
+  background: #a5d6a7;
+}
