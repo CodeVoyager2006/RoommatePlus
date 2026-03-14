@@ -68,13 +68,16 @@ export default function Chores({ householdId, refreshProfile }) {
       return;
     }
 
+    // Fetch both 'ongoing' AND 'passed' chores that have a repeat_mask set.
+    // We need passed-but-recurring chores so we can revive them when today
+    // matches one of their repeat days.
     const { data: chores, error: choresError } = await supabase
       .from("chores")
       .select("id, name, due_date, description, household_id, status, repeat_mask, points, image_url")
       .eq("household_id", hid)
-      .eq("status", "ongoing");
+      .or("status.eq.ongoing,and(status.eq.passed,repeat_mask.gt.0)");
 
-    if (choresError || !chores || chores.length === 0) {
+      if (choresError || !chores || chores.length === 0) {
       setRoommates(
         profiles.map((p) => ({
           id: p.id,
@@ -86,7 +89,138 @@ export default function Chores({ householdId, refreshProfile }) {
       return;
     }
 
-    const choreIds = chores.map((c) => c.id);
+    // ── Recurrence revival & forward-projection logic ───────────────────────
+    // repeat_mask bit layout: Sun=1, Mon=2, Tue=4, Wed=8, Thu=16, Fri=32, Sat=64
+    // (bit N = 1 << dayOfWeek, where 0=Sun … 6=Sat)
+    //
+    // All date arithmetic uses the user's LOCAL timezone so chores flip at
+    // their wall-clock midnight, never at UTC midnight.
+    const userTz     = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const todayISO   = new Date().toLocaleDateString("en-CA", { timeZone: userTz }); // "YYYY-MM-DD"
+    const todayLocal = new Date(todayISO); // local midnight — safe numeric anchor
+    const todayDow   = todayLocal.getUTCDay(); // 0=Sun … 6=Sat in LOCAL date
+    const todayDowBit = 1 << todayDow;
+
+    /**
+     * nextRecurringDate(mask, fromISO)
+     *
+     * Given a repeat bitmask and a "YYYY-MM-DD" anchor, returns the nearest
+     * future (or current) "YYYY-MM-DD" that aligns with one of the set bits.
+     *
+     * Algorithm (no external libraries):
+     *   For each of the 7 days starting from today (offset 0 … 6), check
+     *   whether (todayDow + offset) % 7 is set in the mask.  The first hit
+     *   is the answer.  Offset 0 = "today is a repeat day → due today".
+     *   Offset 1–6 = "next occurrence is N days away".
+     *
+     *   This is equivalent to the modulo hint: (targetDow + 7 - todayDow) % 7
+     *   applied across all set bits, then taking the minimum.
+     */
+    function nextRecurringDate(mask) {
+      for (let offset = 0; offset < 7; offset++) {
+        const candidateDow = (todayDow + offset) % 7;
+        if (mask & (1 << candidateDow)) {
+          if (offset === 0) return todayISO;
+          const d = new Date(todayLocal);
+          d.setUTCDate(d.getUTCDate() + offset);
+          return d.toISOString().slice(0, 10); // "YYYY-MM-DD"
+        }
+      }
+      return todayISO; // fallback (mask=0 should never reach here)
+    }
+
+    // Chores that need their status flipped to 'ongoing' (were 'passed')
+    const choreIdsToRevive = [];
+    // Chores already 'ongoing' but whose due_date is stale (past) → project forward
+    const dateUpdates = []; // [{ id, due_date }]
+
+    for (const chore of chores) {
+      if (!chore.repeat_mask || chore.repeat_mask === 0) continue;
+
+      const nextISO = nextRecurringDate(chore.repeat_mask);
+
+      if (chore.status === "passed") {
+        // Guard: already revived this cycle
+        if (chore.due_date === nextISO) continue;
+        choreIdsToRevive.push(chore.id);
+        // Store the computed next date so we can patch in-memory below
+        chore._nextISO = nextISO;
+
+      } else if (chore.status === "ongoing") {
+        // due_date is stale (in the past) but chore is still active
+        if (!chore.due_date || chore.due_date >= todayISO) continue;
+        dateUpdates.push({ id: chore.id, due_date: nextISO });
+        chore._nextISO = nextISO;
+      }
+    }
+
+    // ── Persist & patch: revived (passed → ongoing) chores ───────────────────
+    if (choreIdsToRevive.length > 0) {
+      console.log(`[Chores] reviving ${choreIdsToRevive.length} recurring chore(s):`, choreIdsToRevive);
+
+      // Build per-chore payloads so each gets its own correct next date.
+      // Supabase doesn't support per-row values in a bulk update, so we batch
+      // individual updates in parallel (one promise per unique target date).
+      const byDate = new Map();
+      for (const chore of chores) {
+        if (!choreIdsToRevive.includes(chore.id)) continue;
+        const iso = chore._nextISO ?? todayISO;
+        if (!byDate.has(iso)) byDate.set(iso, []);
+        byDate.get(iso).push(chore.id);
+      }
+
+      const reviveResults = await Promise.all(
+        [...byDate.entries()].map(([iso, ids]) =>
+          supabase
+            .from("chores")
+            .update({ status: "ongoing", due_date: iso, drop_reason: "N/A" })
+            .in("id", ids)
+        )
+      );
+
+      const reviveErr = reviveResults.find((r) => r.error)?.error;
+      if (reviveErr) {
+        console.error("[Chores] recurrence revival error:", reviveErr);
+      } else {
+        for (const chore of chores) {
+          if (choreIdsToRevive.includes(chore.id)) {
+            chore.status   = "ongoing";
+            chore.due_date = chore._nextISO ?? todayISO;
+          }
+        }
+      }
+    }
+
+    // ── Persist & patch: ongoing chores with a stale due_date ────────────────
+    if (dateUpdates.length > 0) {
+      console.log(`[Chores] forward-projecting ${dateUpdates.length} stale due_date(s):`, dateUpdates);
+
+      const byDate = new Map();
+      for (const { id, due_date } of dateUpdates) {
+        if (!byDate.has(due_date)) byDate.set(due_date, []);
+        byDate.get(due_date).push(id);
+      }
+
+      const updateResults = await Promise.all(
+        [...byDate.entries()].map(([iso, ids]) =>
+          supabase.from("chores").update({ due_date: iso }).in("id", ids)
+        )
+      );
+
+      const updateErr = updateResults.find((r) => r.error)?.error;
+      if (updateErr) {
+        console.error("[Chores] stale due_date update error:", updateErr);
+      } else {
+        for (const chore of chores) {
+          const upd = dateUpdates.find((u) => u.id === chore.id);
+          if (upd) chore.due_date = upd.due_date;
+        }
+      }
+    }
+
+    // Only surface 'ongoing' chores to the UI (revived ones are now ongoing)
+    const ongoingChores = chores.filter((c) => c.status === "ongoing");
+    const choreIds = ongoingChores.map((c) => c.id);
 
     const { data: assignments, error: assignmentsError } = await supabase
       .from("chore_assignments")
@@ -108,7 +242,7 @@ export default function Chores({ householdId, refreshProfile }) {
 
     const allChoresForUI = [];
 
-    for (const chore of chores) {
+    for (const chore of ongoingChores) {
       const assignedProfileIds = safeAssignments
         .filter((a) => a.chore_id === chore.id)
         .map((a) => a.profile_id);
@@ -151,8 +285,12 @@ export default function Chores({ householdId, refreshProfile }) {
   // ── runOverdueCheck ─────────────────────────────────────────────────────────
   // Auto-marks passed-due chores and creates a "Missed deadline" thread for each.
   async function runOverdueCheck(choresForUI) {
-    const now = new Date();
-    const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    // Resolve the user's local timezone from the browser — same source of truth
+    // used by the recurrence revival block in loadData().
+    const userTz      = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const todayISO    = new Date().toLocaleDateString("en-CA", { timeZone: userTz }); // "YYYY-MM-DD"
+    const todayLocal  = new Date(todayISO); // midnight of local today (numeric anchor)
+    const todayDowBit = 1 << todayLocal.getUTCDay(); // day-of-week bit derived from the LOCAL date
 
     const seen = new Set();
     const overdueChores = [];
@@ -163,10 +301,13 @@ export default function Chores({ householdId, refreshProfile }) {
 
       if (!chore.dueDate) continue;
 
-      const d = new Date(chore.dueDate);
-      const dueUTC = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+      // Parse the stored "YYYY-MM-DD" as a midnight date so the numeric
+      // comparison is apples-to-apples with todayLocal.
+      const dueLocal = new Date(chore.dueDate);
 
-      if (dueUTC < todayUTC) overdueChores.push(chore);
+      // Skip chores that recur today — they were just revived by the recurrence logic
+      const repeatsToday = chore.repeatBitmask && (chore.repeatBitmask & todayDowBit) !== 0;
+      if (dueLocal < todayLocal && !repeatsToday) overdueChores.push(chore);
     }
 
     if (overdueChores.length === 0) return;
